@@ -1,0 +1,107 @@
+================================================================================
+  GUÍA DE TRANSFERENCIA — PhotoBearRate
+  Cómo mover la aplicación a otro equipo
+================================================================================
+
+CONTENIDO DEL RESPALDO
+-----------------------
+El archivo ZIP contiene todo lo necesario para restaurar la app en un nuevo PC:
+
+  instance/photogame.db  →  Base de datos completa (usuarios, ratings,
+                             historias, comentarios, configuración, etc.)
+  uploads/               →  Imágenes y videos subidos por el administrador
+  templates/             →  Plantillas HTML de la aplicación
+  static/                →  Archivos CSS, JS, iconos y recursos estáticos
+  routes/                →  Código de todas las rutas del servidor
+  *.py                   →  Código fuente principal (app.py, models.py, etc.)
+  requirements.txt       →  Lista de dependencias de Python
+  config.json            →  Configuración local
+  vapid_keys.json        →  Claves para notificaciones push
+  iniciar_app.vbs        →  Script de arranque para Windows (doble clic)
+  *.bat / *.ps1          →  Scripts auxiliares de Windows
+
+
+PASOS PARA RESTAURAR EN UN NUEVO EQUIPO
+----------------------------------------
+
+1. INSTALAR PYTHON
+   ─────────────────
+   Descarga Python 3.11 o superior desde: https://www.python.org/downloads/
+   Durante la instalación marca la opción "Add Python to PATH".
+
+2. DESCOMPRIMIR EL RESPALDO
+   ──────────────────────────
+   Descomprime el archivo photobearrate_backup_XXXXXXXX.zip en la carpeta
+   donde quieras tener la aplicación, por ejemplo:
+       C:\PhotoBearRate\
+
+3. INSTALAR DEPENDENCIAS
+   ─────────────────────
+   Abre una terminal (CMD o PowerShell) en la carpeta del proyecto y ejecuta:
+
+       pip install -r requirements.txt
+
+   Si hay problemas de permisos, usa:
+       pip install --user -r requirements.txt
+
+4. VERIFICAR LA BASE DE DATOS
+   ───────────────────────────
+   El archivo instance\photogame.db ya contiene todos los datos.
+   No es necesario hacer ninguna migración adicional.
+
+5. INICIAR LA APLICACIÓN
+   ──────────────────────
+   Opción A — Doble clic en:
+       iniciar_app.vbs
+
+   Opción B — Desde terminal:
+       python app.py
+
+   La app quedará disponible en: http://localhost:5001
+   (o el puerto que esté configurado en la base de datos)
+
+6. CONFIGURAR TAILSCALE (acceso externo HTTPS)
+   ─────────────────────────────────────────────
+   Si necesitas que la app sea accesible desde internet vía HTTPS:
+
+   a) Instala Tailscale: https://tailscale.com/download
+   b) Inicia sesión con la cuenta del equipo anterior
+   c) Activa Funnel para el puerto de la app:
+          tailscale funnel 5001
+   d) La URL pública seguirá siendo la misma si usas la misma cuenta Tailscale.
+      Si cambias de cuenta, actualiza la URL en el Panel Admin → Configuración.
+
+7. REGENERAR CERTIFICADOS SSL (solo si usas HTTPS local)
+   ────────────────────────────────────────────────────────
+   Los certificados cert.pem y key.pem NO se incluyen en el respaldo por
+   razones de seguridad. Si los necesitas, genéralos con:
+       python generate_ssl.py
+
+8. CONFIGURAR COMO SERVICIO (arranque automático)
+   ──────────────────────────────────────────────
+   Para que la app arranque automáticamente con Windows:
+       instalar_tarea.bat      (Tarea programada — recomendado)
+       instalar_servicio.bat   (Servicio de Windows con NSSM)
+
+
+NOTAS IMPORTANTES
+-----------------
+  • Los usuarios y contraseñas están en la base de datos, no cambia nada.
+  • Las imágenes y videos de la carpeta uploads/ se restauran completamente.
+  • Si el nuevo equipo tiene una IP diferente en la red local, actualiza la
+    URL en Panel Admin → Configuración → Puerto/Hostname.
+  • Las claves VAPID (notificaciones push) se mantienen en vapid_keys.json.
+    Si las regeneras, los dispositivos suscritos dejarán de recibir alertas.
+
+
+ARCHIVOS CRÍTICOS PARA EL RESPALDO
+------------------------------------
+  instance/photogame.db    ← NUNCA borrar, contiene TODOS los datos
+  uploads/                 ← Imágenes y videos subidos
+  vapid_keys.json          ← Claves push (no regenerar si hay suscriptores)
+
+
+================================================================================
+  Generado con el sistema de respaldo integrado de PhotoBearRate
+  Panel Admin → tab 💾 Respaldo → Descargar Respaldo ZIP
+================================================================================

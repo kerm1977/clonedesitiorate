@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}🐻 PhotoBear{% endblock %}</title>
+    <!-- Meta tags para no indexar en buscadores -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="slurp" content="noindex, nofollow">
+    <meta name="duckduckbot" content="noindex, nofollow">
+    <meta name="baiduspider" content="noindex, nofollow">
+    <meta name="yandexbot" content="noindex, nofollow">
+    <meta name="sogou_spider" content="noindex, nofollow">
+    <meta name="exabot" content="noindex, nofollow">
+    <meta name="facebot" content="noindex, nofollow">
+    <meta name="ia_archiver" content="noindex, nofollow">
+    <meta name="seznambot" content="noindex, nofollow">
+    <meta name="ahrefsbot" content="noindex, nofollow">
+    <meta name="semrushbot" content="noindex, nofollow">
+    <meta name="mj12bot" content="noindex, nofollow">
+    <meta name="dotbot" content="noindex, nofollow">
+    <meta name="spider" content="noindex, nofollow">
+    <meta name="crawl" content="noindex, nofollow">
+    <meta name="bot" content="noindex, nofollow">
+    <meta name="crawler" content="noindex, nofollow">
+    <meta name="scraper" content="noindex, nofollow">
+    <meta name="agent" content="noindex, nofollow">
+    <meta name="X-Robots-Tag" content="noindex, nofollow, noarchive, nosnippet">
+    <style>
+        /* Estilos críticos para evitar FOUC */
+        body { opacity: 0; }
+        body.loaded { opacity: 1; transition: opacity 0.2s ease; }
+
+        /* ── Chat Modal (inline para evitar FOUC en primer uso) ── */
+        .chat-modal {
+            background: #fff;
+            border: 3px solid #845ec2;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(132,94,194,0.25);
+        }
+        .chat-modal-header {
+            background: linear-gradient(135deg, #ff6b9d, #845ec2);
+            border-bottom: none;
+            padding: 0.75rem 1rem;
+        }
+        .chat-modal-header .fun-title { color: #fff; font-size: 1.1rem; }
+        .chat-modal-header .btn-light  { background: rgba(255,255,255,0.2); border: none; color: #fff; }
+        .chat-modal-header .btn-outline-light { border-color: rgba(255,255,255,0.5); color: #fff; }
+        .chat-messages {
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f5f0ff;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 260px;
+            max-height: 380px;
+        }
+        .chat-message {
+            max-width: 78%;
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+        .chat-message.mine {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #ff6b9d, #845ec2);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-message.theirs {
+            align-self: flex-start;
+            background: #fff;
+            color: #333;
+            border: 1.5px solid #e8d5f5;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 4px rgba(132,94,194,0.1);
+        }
+        .chat-message-sender { font-size: 0.7rem; font-weight: 700; opacity: 0.75; margin-bottom: 2px; }
+        .chat-message.mine .chat-message-sender { color: rgba(255,255,255,0.85); }
+        .chat-message.theirs .chat-message-sender { color: #845ec2; }
+        .chat-message-time { font-size: 0.68rem; opacity: 0.65; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+        .chat-online-user { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: #555; }
+        .chat-online-user-dot { width: 8px; height: 8px; border-radius: 50%; background: #28a745; display: inline-block; animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0%,100%{box-shadow:0 0 0 2px rgba(40,167,69,0.3)} 50%{box-shadow:0 0 0 5px rgba(40,167,69,0)} }
+        .typing-dots span { animation: typing-blink 1.2s infinite; opacity: 0; }
+        .typing-dots span:nth-child(2){animation-delay:.2s}
+        .typing-dots span:nth-child(3){animation-delay:.4s}
+        @keyframes typing-blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+        /* Backdrop del confirm modal por encima de cualquier otro modal */
+        body.confirm-open .modal-backdrop:last-of-type { z-index: 1075; }
+        
+        /* ── Emoji Picker ── */
+        .emoji-picker {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #fff;
+            border: 2px solid #845ec2;
+            border-radius: 12px;
+            padding: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(132,94,194,0.3);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            width: 320px;
+        }
+        .emoji-btn {
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .emoji-btn:hover {
+            background: #f0e6ff;
+        }
+        
+        /* ── Fake Online Users ── */
+        .fake-online-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid #81c784;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            color: #2e7d32;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .fake-online-badge .online-dot {
+            width: 6px;
+            height: 6px;
+            background: #4caf50;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes gentle-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 2px 6px rgba(229, 57, 53, 0.35); }
+            50% { opacity: 0.82; transform: scale(1.08); box-shadow: 0 4px 14px rgba(229, 57, 53, 0.55); }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modals.min.css') }}">
+    <!-- PWA -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#FF6B9D">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="🐻 PhotoBear">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar fun-navbar">
+    <div class="container">
+        <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}">
+            <span class="brand-icon">🐻</span> PhotoBear <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
+        </a>
+        <div class="d-flex gap-2 align-items-center">
+            <button id="searchModalBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Buscar fotos">
+                <i class="bi bi-search"></i>
+            </button>
+            <button id="pushNotificationsBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Notificaciones">
+                🔕
+            </button>
+            {% if current_user.is_authenticated %}
+            <button id="privateChatBtn" style="display: none;"></button>
+            <a href="{{ url_for('game.favorites') }}"
+               id="navFavBtn"
+               class="btn btn-fun-white btn-sm nav-fav-btn"
+               title="Mis favoritas">
+                ❤️ <span id="navFavCount">{{ favorites_count if favorites_count else 0 }}</span>
+            </a>
+            {% endif %}
+            {% if player_name %}
+            <form action="{{ url_for('game.clear_name') }}" method="POST" class="m-0">
+                <button type="submit" class="btn btn-fun-white btn-sm" title="Cambiar nombre">
+                    👤 {{ player_name }}
+                </button>
+            </form>
+            {% endif %}
+            {% if about and about.content %}
+            <button class="btn btn-fun-white btn-sm" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                💜 Conózcanos
+            </button>
+            {% endif %}
+            {% if current_user.is_authenticated %}
+                {% if current_user.is_superuser %}
+                <a href="{{ url_for('admin.admin') }}" class="btn btn-fun-yellow btn-sm">
+                    ⚙️ Admin
+                </a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-fun-white btn-sm">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- Floating PWA Install Button -->
+<button id="installPWA" class="pwa-install-btn" style="display: none;" title="Instalar App">
+    <i class="bi bi-download"></i>
+</button>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="container mt-3">
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ 'danger' if cat == 'error' else 'success' }} alert-dismissible fade show py-2">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<!-- Floating Options Button (global) -->
+<div class="floating-options-wrapper">
+    <div class="floating-options-btn" id="floatingOptionsBtn" onclick="toggleOptions()">
+        <span class="options-icon">⋮</span>
+    </div>
+</div>
+
+<!-- Options Menu (global) -->
+<div class="options-menu" id="optionsMenu" style="display: none;">
+    <div class="options-item" onclick="window.location.href='{{ url_for('coleccion.index') }}'" style="background:linear-gradient(135deg,rgba(255,107,157,0.08),rgba(229,57,53,0.08));">
+        <span class="options-icon" style="font-size:1.2rem;">🖼️</span> Colecciones
+    </div>
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    <div class="options-item" onclick="openModeratorChat()">
+        <span class="options-icon">🛡️</span> Chat Individual
+    </div>
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.is_superuser %}
+    <div class="options-item" onclick="openSuperModeratorChat()">
+        <span class="options-icon">🛡️</span> Chat Individual
+    </div>
+    {% endif %}
+    <div class="options-item" onclick="window.location.href='{{ url_for('game.favorites') }}'">
+        <span class="options-icon">❤️</span> Mis favoritas
+    </div>
+    {% if current_user.is_authenticated and current_user.is_superuser %}
+    <div class="options-item" onclick="window.location.href='{{ url_for('admin.admin') }}'">
+        <span class="options-icon">⚙️</span> Panel Admin
+    </div>
+    {% endif %}
+</div>
+
+<script src="{{ url_for('static', filename='js/push-notifications.min.js') }}"></script>
+
+<!-- Conózcanos Modal -->
+{% if about and about.content %}
+<div class="modal fade" id="aboutModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content about-modal">
+            <div class="modal-header about-modal-header">
+                <h5 class="modal-title fun-title">
+                    💜 Conózcanos
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body about-content p-4">
+                {{ about.content | safe }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<footer class="text-center py-3 mt-4">
+    <small class="text-muted" style="font-size:0.72rem; opacity:0.6;">
+        ¿Tienes dudas? Escríbenos a
+        <a href="mailto:doll@mummy.com" class="text-muted">doll@mummy.com</a>
+        o a <a href="mailto:bolita@mummy.com" class="text-muted">bolita@mummy.com</a>
+    </small>
+    {% if not current_user.is_authenticated %}
+    <div class="mt-1">
+        <button type="button" class="admin-secret-link border-0 bg-transparent"
+                data-bs-toggle="modal" data-bs-target="#adminLoginModal">
+            <i class="bi bi-lock-fill"></i>
+        </button>
+    </div>
+    {% endif %}
+</footer>
+
+<!-- Admin Login Modal -->
+{% if not current_user.is_authenticated %}
+<div class="modal fade" id="adminLoginModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:360px">
+        <div class="modal-content login-card border-0">
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <div class="login-icon mb-2"><i class="bi bi-shield-lock-fill"></i></div>
+                    <h5 class="fun-title mb-0" style="font-size:1.1rem;">Acceso Restringido</h5>
+                    <p class="fun-subtitle-sm mb-0">Solo para superusuarios</p>
+                </div>
+                <form method="POST" action="{{ url_for('auth.login') }}" autocomplete="off">
+                    <div class="mb-2">
+                        <input type="email" name="email" class="form-control form-control-dark form-control-sm"
+                               placeholder="Correo electrónico" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" name="password" class="form-control form-control-dark form-control-sm"
+                               placeholder="Contraseña" required>
+                    </div>
+                    <button type="submit" class="btn btn-fun-pink w-100">Entrar 🔓</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Search Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content chat-modal">
+            <div class="modal-header chat-modal-header py-2">
+                <h5 class="fun-title mb-0">🔍 Buscar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <!-- Filtro de formato -->
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-fun-pink btn-sm search-filter-btn" data-filter="all">🔍 Todo</button>
+                    <button class="btn btn-outline-light btn-sm search-filter-btn" data-filter="image">📷 Imágenes</button>
+                    <button class="btn btn-outline-light btn-sm search-filter-btn" data-filter="video">🎬 Videos</button>
+                </div>
+                <!-- Campo de búsqueda -->
+                <div class="input-group mb-2">
+                    <span class="input-group-text" style="background:#2a2a2a;border-color:#444;color:#aaa;"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control form-control-dark"
+                           placeholder="Escribe el nombre del archivo..." autocomplete="off">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearSearchBtn" style="border-color:#444;" title="Limpiar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div id="searchStatus" class="text-muted small mb-2" style="min-height:18px;"></div>
+                <div id="searchResults" style="position:static; max-height:430px; overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Private Chat User Selection Modal -->
+<div class="modal fade" id="privateChatModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content chat-modal">
+            <div class="modal-header chat-modal-header">
+                <h5 class="fun-title mb-0">💬 Conversar en Privado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="mb-3">
+                    <input type="text" id="userSearchInput" class="form-control form-control-dark"
+                           placeholder="Buscar usuario..." autocomplete="off">
+                </div>
+                <div id="usersList" class="search-results" style="display: block; position: static; max-height: 400px;"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-fun-white" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+<!-- Botón notificación superusuario para nitalaosita -->
+<button id="superNotifBtn" onclick="openSuperChat()" title="Mensaje nuevo"
+    style="display:none;position:fixed;bottom:86px;right:20px;z-index:9999;width:52px;height:52px;
+           border-radius:50%;background:linear-gradient(135deg,#845ec2,#ff6b9d);border:none;
+           color:#fff;font-size:1.4rem;box-shadow:0 4px 16px rgba(132,94,194,0.5);
+           cursor:pointer;align-items:center;justify-content:center;animation:pulse 1s infinite;">
+    💌
+    <span id="superNotifCount" style="position:absolute;top:-4px;right:-4px;background:#dc3545;
+          color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.65rem;font-weight:700;
+          display:flex;align-items:center;justify-content:center;">0</span>
+</button>
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_superuser %}
+<!-- Botón flotante actividad Nita -->
+<button id="nitaActivityFab" onclick="toggleNitaPanel()" title="Actividad de Nita"
+    style="position:fixed;bottom:86px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+           background:linear-gradient(135deg,#ff6b9d,#845ec2);border:none;color:#fff;font-size:1.4rem;
+           box-shadow:0 4px 16px rgba(132,94,194,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+    🐻
+    <span id="nitaBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc3545;
+          color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.65rem;font-weight:700;
+          display:none;align-items:center;justify-content:center;">0</span>
+</button>
+
+<!-- Panel actividad Nita -->
+<div id="nitaActivityPanel" style="display:none;position:fixed;bottom:148px;right:20px;z-index:9998;
+     width:320px;max-height:420px;border-radius:16px;overflow:hidden;
+     box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div style="background:linear-gradient(135deg,#ff6b9d,#845ec2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <span class="text-white fw-bold">🐻 Actividad de Nita</span>
+        <div class="d-flex gap-2 align-items-center">
+            <button id="callNitaBtn" onclick="callNita()" title="Llamar a Nita"
+                style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:#fff;
+                       border-radius:20px;padding:3px 10px;font-size:0.8rem;cursor:pointer;">
+                📲 Llamar
+            </button>
+            <button onclick="toggleNitaPanel()" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;">✕</button>
+        </div>
+    </div>
+    <div id="nitaActivityList" style="background:#fff;overflow-y:auto;max-height:340px;padding:8px 0;">
+        <div class="text-center text-muted py-4" id="nitaEmptyState" style="font-size:0.9rem;">Sin actividad reciente</div>
+    </div>
+</div>
+
+<!-- Modal alerta rápida Nita -->
+<div class="modal fade" id="nitaAlertModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:340px;">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:none;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0 pb-0" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);">
+                <span class="text-white fw-bold" id="nitaAlertTitle">� Nita</span>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-3">
+                <p class="mb-1 fw-semibold" id="nitaAlertText"></p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-fun-pink btn-sm px-3" id="nitaAlertGoBtn">Ver</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Confirm Modal (temático) -->
+<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" style="z-index:1080;">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" id="confirmModalContent" style="border-radius:24px;overflow:hidden;border:3px solid #ff6b9d;box-shadow:0 8px 32px rgba(255,107,157,0.35);">
+            <div class="modal-header border-0 pb-0" id="confirmModalHeader" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);padding:1.1rem 1.25rem 0.6rem;">
+                <h5 class="modal-title fun-title mb-0 w-100 text-center text-white" id="confirmModalEmoji" style="font-size:1.5rem;">⚠️</h5>
+            </div>
+            <div class="modal-body text-center px-4 py-3" id="confirmModalBody" style="background:#fff8fc;">
+                <p class="mb-0 fw-600" id="confirmModalMsg" style="font-family:'Nunito',sans-serif;font-size:0.97rem;color:#3d2060;"></p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2 pt-0 pb-3" style="background:#fff8fc;">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-4" id="confirmModalCancel" style="border-radius:20px;">Cancelar</button>
+                <button type="button" class="btn btn-sm px-4" id="confirmModalOk" style="border-radius:20px;background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin → Nita: modal de composición (solo superusuario) -->
+{% if current_user.is_authenticated and current_user.is_superuser %}
+<div class="modal fade" id="adminMsgModal" tabindex="-1" style="z-index:1080;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:3px solid #845ec2;box-shadow:0 8px 32px rgba(132,94,194,0.3);">
+            <div class="modal-header border-0" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);padding:0.9rem 1.25rem;">
+                <h5 class="fun-title mb-0 text-white">📢 Mensaje para nitalaosita</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="background:#fff8fc;">
+                <textarea id="adminMsgText" class="form-control" rows="4" placeholder="Escribe el mensaje personalizado..." style="border-radius:12px;border:2px solid #e8d5f5;font-family:'Nunito',sans-serif;resize:none;"></textarea>
+            </div>
+            <div class="modal-footer border-0 justify-content-end gap-2" style="background:#fff8fc;">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal" style="border-radius:20px;">Cancelar</button>
+                <button type="button" class="btn btn-sm px-4" id="adminMsgSendBtn" style="border-radius:20px;background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;">Enviar 📨</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Superusuario: aviso de conexión de nitalaosita -->
+{% if current_user.is_authenticated and current_user.is_superuser %}
+<div class="modal fade" id="nitaOnlineModal" tabindex="-1" style="z-index:1200;">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:2px solid #a78bfa;box-shadow:0 8px 32px rgba(167,139,250,0.4);">
+            <div class="modal-header border-0 justify-content-center pt-4 pb-2" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);">
+                <div class="text-center w-100">
+                    <div style="font-size:2.2rem;">🟢</div>
+                    <h5 class="modal-title text-white fw-bold mt-1">¡Nitalaosita se conectó!</h5>
+                </div>
+            </div>
+            <div class="modal-body text-center py-3 px-4">
+                <p class="mb-0" style="font-size:0.95rem;">Nitalaosita acaba de iniciar sesión en la app.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4 gap-2 flex-column">
+                <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                        onclick="window._nitaOnlineSuppressToday()"
+                        data-bs-dismiss="modal">
+                    No mostrar más por hoy
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary w-100"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Nita: modal de REPORTE de comentario (mensaje personalizado desde admin) -->
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+<div class="modal fade" id="nitaReportModal" tabindex="-1" style="z-index:1100;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;overflow:hidden;border:3px solid #ffc107;box-shadow:0 12px 40px rgba(255,193,7,0.35);">
+            <div class="modal-header border-0 justify-content-center flex-column text-center pt-4 pb-2" style="background:linear-gradient(135deg,#ff9800,#ff5722);">
+                <div id="nitaReportEmoji" style="font-size:2.5rem;line-height:1;">{{ nita_report_emoji }}</div>
+                <h5 id="nitaReportTitle" class="fun-title text-white mt-2 mb-0">{{ nita_report_title }}</h5>
+                <small id="nitaReportCommentInfo" class="text-white-50 mt-1" style="font-size:0.8rem;"></small>
+            </div>
+            <div class="modal-body text-center px-4 py-4" style="background:#fff8fc;">
+                <p id="nitaReportMsg" class="mb-0" style="font-family:'Nunito',sans-serif;font-size:1.05rem;color:#3d2060;font-weight:600;white-space:pre-wrap;">{{ nita_report_msg }}</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4" style="background:#fff8fc;">
+                <button type="button" class="btn px-5 py-2" data-bs-dismiss="modal" style="border-radius:24px;background:linear-gradient(135deg,#ff9800,#ff5722);color:#fff;border:none;font-size:1rem;font-weight:700;">
+                    Entendido ✓
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Nita: modal de BIENVENIDA (programable desde admin) -->
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+<div class="modal fade" id="nitaWelcomeModal" tabindex="-1" data-bs-backdrop="static" style="z-index:1095;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:28px;overflow:hidden;border:3px solid #ff6b9d;box-shadow:0 16px 48px rgba(255,107,157,0.45);">
+            <div class="modal-header border-0 justify-content-center flex-column text-center pt-4 pb-2" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);">
+                <div id="nitaWelcomeEmoji" style="font-size:3rem;line-height:1;">🌸</div>
+                <h4 id="nitaWelcomeTitle" class="fun-title text-white mt-2 mb-0">¡Bienvenida! 💖</h4>
+            </div>
+            <div class="modal-body text-center px-4 py-4" style="background:#fff8fc;">
+                <p id="nitaWelcomeMsg" class="mb-0" style="font-family:'Nunito',sans-serif;font-size:1.08rem;color:#3d2060;font-weight:600;white-space:pre-wrap;"></p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4" style="background:#fff8fc;">
+                <button type="button" id="nitaWelcomeCloseBtn" class="btn px-5 py-2" style="border-radius:24px;background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;font-size:1rem;font-weight:700;">
+                    Cerrar ✓
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Nita: modal de alerta del administrador -->
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+<div class="modal fade" id="nitaAdminAlertModal" tabindex="-1" data-bs-backdrop="static" style="z-index:1090;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;overflow:hidden;border:3px solid #ff6b9d;box-shadow:0 12px 40px rgba(255,107,157,0.4);">
+            <div class="modal-header border-0 justify-content-center" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);padding:1.2rem 1.5rem 0.7rem;">
+                <div class="text-center text-white w-100">
+                    <div style="font-size:2.2rem;">📩</div>
+                    <h5 class="fun-title mb-0 mt-1">Mensaje Recibido</h5>
+                    <small id="nitaAdminAlertFrom" style="opacity:0.85;font-size:0.8rem;"></small>
+                </div>
+            </div>
+            <div class="modal-body text-center px-4 py-4" style="background:#fff8fc;">
+                <p id="nitaAdminAlertMsg" class="mb-0" style="font-family:'Nunito',sans-serif;font-size:1.05rem;color:#3d2060;font-weight:600;white-space:pre-wrap;"></p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4" style="background:#fff8fc;">
+                <button type="button" class="btn btn-sm px-5 py-2" id="nitaAdminAlertClose" style="border-radius:24px;background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;font-size:1rem;font-weight:700;">Cerrar ✓</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chat Modal -->
+<div class="modal fade" id="chatModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content chat-modal">
+            <div class="modal-header chat-modal-header">
+                <h5 class="fun-title mb-0">💬 Chat <span id="chatPartnerName" style="font-size:0.85rem; opacity:0.9; font-weight:500;"></span></h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-sm btn-outline-light" id="refreshChatBtn" title="Actualizar mensajes">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    {% if current_user.is_authenticated and current_user.is_superuser %}
+                    <button class="btn btn-sm btn-outline-light" id="adminMsgOpenBtn" title="Enviar mensaje a nitalaosita" style="display:none;" data-bs-toggle="modal" data-bs-target="#adminMsgModal">
+                        <i class="bi bi-megaphone"></i>
+                    </button>
+                    {% endif %}
+                    {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username == 'nitalaosita') %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opciones de chat">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><button class="dropdown-item text-danger" id="clearChatBtn"><i class="bi bi-trash me-2"></i>Limpiar este chat</button></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal" title="Cerrar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <div id="chatMessages" class="chat-messages"></div>
+                <div id="chatTypingIndicator" style="display:none; padding: 0.4rem 1.25rem; font-size: 0.82rem; color: #888; background:#f0f2f5;">
+                    <span id="chatTypingName"></span> está escribiendo<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-2">
+                <div id="chatOnlineUsers" class="mb-2" style="display: none;">
+                    <small class="text-muted">Conectados:</small>
+                    <div id="onlineUsersList" class="d-flex gap-2 flex-wrap mt-1"></div>
+                </div>
+                <div class="input-group position-relative">
+                    <button type="button" class="btn btn-outline-secondary" id="chatImageBtn" title="Subir imagen o video">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
+                    <input type="file" id="chatImageInput" accept="image/*,video/*" style="display: none;">
+                    <button type="button" class="btn btn-outline-secondary" id="emojiBtn" title="Emojis">
+                        <i class="bi bi-emoji-smile"></i>
+                    </button>
+                    <input type="text" id="chatInput" class="form-control" placeholder="Escribe un mensaje...">
+                    <button type="button" class="btn btn-fun-pink" id="chatSendBtn">
+                        <i class="bi bi-send"></i>
+                    </button>
+                    <div id="emojiPicker" class="emoji-picker" style="display: none;"></div>
+                </div>
+                <div class="mt-2 text-center" id="chatInfoMessage" style="display: none;">
+                    <small class="text-muted" style="font-size: 0.7rem; line-height: 1.4;"></small>
+                </div>
+                {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username == 'nitalaosita') %}
+                <div class="mt-2 text-center" id="fakeOnlineUsers" style="display: none;">
+                    <small class="text-muted d-block" style="font-size: 0.7rem; margin-bottom: 0.25rem;">Conectados:</small>
+                    <div id="fakeOnlineUsersList" class="d-flex justify-content-center gap-2 flex-wrap"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+// Load settings from API
+fetch('/admin/api/settings')
+    .then(r => r.json())
+    .then(data => {
+        // Update user count badge
+        const userCountBadge = document.getElementById('userCountBadge');
+        if (userCountBadge && data.user_count) {
+            userCountBadge.textContent = data.user_count;
+        }
+        
+        // Update chat info message
+        const chatInfoDiv = document.getElementById('chatInfoMessage');
+        if (chatInfoDiv && data.chat_info) {
+            chatInfoDiv.querySelector('small').textContent = data.chat_info;
+            if (data.show_chat_info) {
+                chatInfoDiv.style.display = 'block';
+            }
+        }
+    })
+    .catch(() => {
+        // Use defaults if API fails
+        const userCountBadge = document.getElementById('userCountBadge');
+        if (userCountBadge) {
+            userCountBadge.textContent = '1004 Usuarios en este sitio';
+        }
+    });
+
+// ── Botón flotante de opciones (disponible en TODAS las vistas) ──
+function toggleOptions() {
+    const menu = document.getElementById('optionsMenu');
+    if (!menu) return;
+    const open = menu.style.display !== 'none';
+    menu.style.display = open ? 'none' : 'block';
+}
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('optionsMenu');
+    const btn  = document.getElementById('floatingOptionsBtn');
+    if (!menu || menu.style.display === 'none') return;
+    if (!menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.style.display = 'none';
+    }
+});
+
+// ── Sonidos de chat (Web Audio API) ─────────────────────────────
+const _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function _playBeep(freq, duration, type, vol) {
+    try {
+        const o = _audioCtx.createOscillator();
+        const g = _audioCtx.createGain();
+        o.connect(g); g.connect(_audioCtx.destination);
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, _audioCtx.currentTime);
+        g.gain.setValueAtTime(vol || 0.15, _audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + duration);
+        o.start(_audioCtx.currentTime);
+        o.stop(_audioCtx.currentTime + duration);
+    } catch(e) {}
+}
+function playSendSound() {
+    _playBeep(880, 0.12, 'sine', 0.12);
+    setTimeout(() => _playBeep(1100, 0.1, 'sine', 0.1), 80);
+}
+function playReceiveSound() {
+    _playBeep(600, 0.12, 'sine', 0.15);
+    setTimeout(() => _playBeep(800, 0.15, 'sine', 0.12), 100);
+}
+function playNitaDisconnectAlert() {
+    // Patrón de llamada: 3 series de 2 pulsos descendentes
+    const ring = (offset) => {
+        _playBeep(900, 0.18, 'square', 0.22);
+        setTimeout(() => _playBeep(700, 0.18, 'square', 0.2),  200);
+        setTimeout(() => _playBeep(900, 0.18, 'square', 0.22), 480);
+        setTimeout(() => _playBeep(700, 0.18, 'square', 0.2),  680);
+    };
+    ring(0);
+    setTimeout(() => ring(0), 1100);
+    setTimeout(() => ring(0), 2200);
+}
+function playNitaCallRing() {
+    // Ringtone de teléfono: patrón de 2 tonos ascendentes repetidos
+    const ring = () => {
+        _playBeep(660, 0.25, 'sine', 0.3);
+        setTimeout(() => _playBeep(770, 0.25, 'sine', 0.3), 300);
+    };
+    ring();
+    setTimeout(() => ring(), 800);
+    setTimeout(() => ring(), 1600);
+    setTimeout(() => ring(), 2400);
+}
+
+// ── Socket.IO Chat ──────────────────────────────────────────────
+let currentChatPartner = null;
+let currentChatType = 'private';  // 'private' o 'moderator'
+let socket = null;
+let typingTimer = null;
+let onlineUsers = new Set();
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+// ── Notificación de mensajes de superusuario para Nita ─────────
+let _superNotifCount = 0;
+let _superNotifSender = '';
+
+function openSuperChat() {
+    _superNotifCount = 0;
+    const btn = document.getElementById('superNotifBtn');
+    if (btn) btn.style.display = 'none';
+    // Para nitalaosita, siempre abrir chat de moderadoras
+    const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+    if (isNita) {
+        currentChatType = 'moderator';
+        currentChatPartner = 'nitalaosita';
+        openChat('nitalaosita');
+    } else if (_superNotifSender) {
+        openChat(_superNotifSender);
+    }
+}
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_superuser %}
+// ── Panel de actividad de Nita (scope global) ──────────────────
+let _nitaBadgeCount = 0;
+let _nitaPanelOpen  = false;
+
+function toggleNitaPanel() {
+    _nitaPanelOpen = !_nitaPanelOpen;
+    document.getElementById('nitaActivityPanel').style.display = _nitaPanelOpen ? 'block' : 'none';
+    if (_nitaPanelOpen) {
+        _nitaBadgeCount = 0;
+        const badge = document.getElementById('nitaBadge');
+        if (badge) badge.style.display = 'none';
+    }
+}
+
+async function callNita() {
+    const btn = document.getElementById('callNitaBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '📞 Llamando...';
+    }
+    try {
+        const r = await fetch('/push/call-nita', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            // Añadir al panel de actividad
+            addNitaActivity({
+                type: 'call',
+                icon: '📲',
+                text: 'Llamada enviada',
+                link: null
+            });
+        }
+    } catch(e) {
+        console.error('Error llamando:', e);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📲 Llamar';
+        }
+    }
+}
+
+function addNitaActivity(data) {
+    playReceiveSound();
+    const list  = document.getElementById('nitaActivityList');
+    const empty = document.getElementById('nitaEmptyState');
+    if (empty) empty.remove();
+
+    const now  = new Date().toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit'});
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start;';
+    item.innerHTML = `
+        <span style="font-size:1.2rem;flex-shrink:0">${data.icon}</span>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:0.85rem;color:#333;">${data.text}</div>
+            <div style="font-size:0.75rem;color:#aaa;">${now}</div>
+        </div>
+        ${data.link ? `<a href="${data.link}" style="font-size:0.75rem;color:#845ec2;white-space:nowrap;text-decoration:none;">Ver →</a>` : ''}
+    `;
+    list.insertBefore(item, list.firstChild);
+
+    if (!_nitaPanelOpen) {
+        _nitaBadgeCount++;
+        const badge = document.getElementById('nitaBadge');
+        if (badge) { badge.textContent = _nitaBadgeCount > 9 ? '9+' : _nitaBadgeCount; badge.style.display = 'flex'; }
+    }
+
+    // Alerta rápida 5 segundos
+    document.getElementById('nitaAlertTitle').textContent = '🐻 Nita';
+    document.getElementById('nitaAlertText').textContent  = data.icon + ' ' + data.text;
+    const goBtn = document.getElementById('nitaAlertGoBtn');
+    if (data.link) { goBtn.style.display = ''; goBtn.onclick = () => { window.location.href = data.link; }; }
+    else { goBtn.style.display = 'none'; }
+    const alertInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('nitaAlertModal'));
+    alertInst.show();
+    setTimeout(() => alertInst.hide(), 5000);
+}
+{% endif %}
+
+function initSocket() {
+    if (socket) return;
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+        console.log('Socket connected');
+        socket.emit('get_online');
+    });
+
+    socket.on('online_list', data => {
+        console.log('online_list received');
+        onlineUsers = new Set(data.online || []);
+        refreshOnlinePanel();
+        // Actualizar lista de usuarios en modal de selección si está visible
+        const usersList = document.getElementById('usersList');
+        if (usersList && usersList.children.length > 0) {
+            loadUsers();
+        }
+        
+        // Si hay un chat pendiente de cargar historial, cargarlo ahora
+        if (window._pendingChatLoad) {
+            console.log('Loading pending chat history after online_list');
+            loadChatHistory();
+            window._pendingChatLoad = false;
+        }
+    });
+
+    socket.on('user_online', data => {
+        onlineUsers.add(data.username);
+        refreshOnlinePanel();
+    });
+
+    {% if current_user.is_authenticated and current_user.is_superuser %}
+    socket.on('nita_activity', data => {
+        addNitaActivity(data);
+    });
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    socket.on('call_nita', () => {
+        playNitaCallRing();
+    });
+
+    socket.on('super_message_to_nita', data => {
+        playReceiveSound();
+        _superNotifSender = 'nitalaosita';  // Siempre abrir chat de moderadoras
+        // Solo mostrar botón si el chat no está ya abierto con ese usuario
+        const chatModal = document.getElementById('chatModal');
+        const chatOpen = chatModal && chatModal.classList.contains('show');
+        if (!chatOpen) {
+            _superNotifCount++;
+            const btn = document.getElementById('superNotifBtn');
+            const count = document.getElementById('superNotifCount');
+            if (btn) { btn.style.display = 'flex'; }
+            if (count) { count.textContent = _superNotifCount > 9 ? '9+' : _superNotifCount; }
+        }
+    });
+    {% endif %}
+
+    socket.on('user_offline', data => {
+        onlineUsers.delete(data.username);
+        refreshOnlinePanel();
+    });
+
+    const _seenMsgIds = new Set();
+    socket.on('new_message', msg => {
+        console.log('new_message received:', msg);
+        console.log('currentChatPartner:', currentChatPartner, 'currentChatType:', currentChatType);
+        
+        // Deduplicar
+        if (msg.id && _seenMsgIds.has(msg.id)) return;
+        if (msg.id) _seenMsgIds.add(msg.id)
+
+        const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+        const isMe = msg.sender === me;
+        // Usar currentChatPartner (más fiable que classList.contains('show') durante animación)
+        const chatIsActive = !!currentChatPartner;
+
+        if (isMe) {
+            // Actualizar elemento optimista pendiente con ID real
+            const pendingEl = document.querySelector('.chat-message.mine[data-pending-key]');
+            if (pendingEl) {
+                if (msg.id) pendingEl.dataset.msgId = msg.id;
+                delete pendingEl.dataset.pendingKey;
+            } else if (chatIsActive) {
+                appendMessage(msg.display_sender || msg.sender, msg.content, true, msg.time, msg.image_path, msg.id);
+            }
+            return;
+        }
+
+        // Mensaje de otro usuario - solo mostrar si coincide con el chat_type actual
+        const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+        // Solo ignorar por chat_type si el chat está abierto
+        if (chatIsActive && isNita && msg.chat_type && msg.chat_type !== currentChatType) {
+            // nitalaosita: ignorar mensajes de otro tipo de chat cuando el chat está abierto
+            console.log('Ignoring message - wrong chat_type');
+            updateUnreadBadge();
+            return;
+        }
+
+        // Para nitalaosita en chat de moderadoras, mostrar todos los mensajes de tipo moderator
+        const shouldShow = isNita && currentChatType === 'moderator' 
+            ? (msg.chat_type === 'moderator')
+            : (msg.sender === currentChatPartner);
+        
+        console.log('shouldShow:', shouldShow, 'isNita:', isNita, 'msg.chat_type:', msg.chat_type, 'chatIsActive:', chatIsActive);
+
+        if (chatIsActive && shouldShow) {
+            console.log('Appending message in real-time');
+            appendMessage(msg.display_sender || msg.sender, msg.content, false, msg.time, msg.image_path, msg.id);
+            fetch('/chat/mark-read/' + encodeURIComponent(currentChatPartner), { method: 'POST' }).catch(() => {});
+        } else {
+            // Chat no abierto o mensaje de otro interlocutor → solo badge
+            console.log('Not showing message - chat not active or shouldShow false');
+            updateUnreadBadge();
+        }
+        playReceiveSound();
+        socket.emit('message_received', { msg_id: msg.id, sender: msg.sender });
+    });
+
+    socket.on('message_status', data => {
+        if (data.status === 'received') {
+            const el = document.querySelector(`.chat-message[data-msg-id="${data.msg_id}"] .msg-status`);
+            if (el) { el.textContent = '✓✓'; el.style.color = '#4fc3f7'; el.title = 'Recibido'; }
+        }
+    });
+
+    socket.on('message_deleted', data => {
+        const el = document.querySelector(`.chat-message[data-msg-id="${data.msg_id}"]`);
+        if (el) {
+            el.style.transition = 'opacity 0.25s';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 260);
+        }
+    });
+
+    socket.on('message_edited', data => {
+        const el = document.querySelector(`.chat-message[data-msg-id="${data.msg_id}"]`);
+        if (el) {
+            const contentEl = el.querySelector('.chat-message-content');
+            if (contentEl) {
+                contentEl.innerHTML = linkify(data.content);
+            }
+            const timeEl = el.querySelector('.chat-message-time');
+            if (timeEl && !timeEl.innerHTML.includes('(editado)')) {
+                timeEl.innerHTML += ' <span style="font-size:0.65rem;opacity:0.6;">(editado)</span>';
+            }
+        }
+    });
+
+    socket.on('all_chats_cleared', () => {
+        const chatModal = document.getElementById('chatModal');
+        const chatOpen = chatModal && chatModal.classList.contains('show');
+        if (chatOpen) {
+            const container = document.getElementById('chatMessages');
+            if (container) container.innerHTML = '';
+        }
+    });
+
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    socket.on('nita_welcome', data => {
+        if (data.msg) _showNitaWelcome(data);
+    });
+
+    socket.on('admin_modal', data => {
+        const msgEl = document.getElementById('nitaAdminAlertMsg');
+        const fromEl = document.getElementById('nitaAdminAlertFrom');
+        if (msgEl) msgEl.textContent = data.message || '';
+        if (fromEl) fromEl.textContent = 'Participante';
+        const m = initNitaAdminModal();
+        m.show();
+        // Elevar backdrop por encima de cualquier modal abierto
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length) backdrops[backdrops.length - 1].style.zIndex = '1085';
+        }, 10);
+    });
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.is_superuser %}
+    // Mostrar/ocultar botón 📢 según el partner del chat
+    const _adminMsgBtn = document.getElementById('adminMsgOpenBtn');
+
+    // 🟢 Aviso: nitalaosita se conectó
+    window._nitaOnlineSuppressToday = function() {
+        localStorage.setItem('nitaOnlineSuppressed', new Date().toDateString());
+    };
+    socket.on('nita_connected', () => {
+        if (localStorage.getItem('nitaOnlineSuppressed') === new Date().toDateString()) return;
+        const el = document.getElementById('nitaOnlineModal');
+        if (el) { bootstrap.Modal.getOrCreateInstance(el).show(); }
+    });
+
+    // 🔴 Aviso sonoro: nitalaosita se desconectó
+    socket.on('nita_disconnected', () => {
+        playNitaDisconnectAlert();
+    });
+    {% endif %}
+
+    socket.on('chat_cleared', data => {
+        const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+        // Si yo limpié no necesito recargar (ya lo hice al confirmar)
+        if (data.by === me) return;
+        
+        // Para chat de moderadoras, verificar el chat_type
+        const isModChat = data.chat_type === 'moderator';
+        const isNita = me === 'nitalaosita';
+        
+        // Si tengo el chat abierto con quien limpió, vaciar la vista
+        const chatModal = document.getElementById('chatModal');
+        const chatOpen = chatModal && chatModal.classList.contains('show');
+        
+        let shouldClear = false;
+        if (isModChat && isNita) {
+            // nitalaosita: limpiar si está en chat de moderadoras
+            shouldClear = chatOpen && currentChatType === 'moderator';
+        } else if (isModChat && current_user.is_superuser) {
+            // moderadora: limpiar si está en chat de moderadoras con nitalaosita
+            shouldClear = chatOpen && currentChatType === 'moderator' && currentChatPartner === 'nitalaosita';
+        } else {
+            // chat normal
+            shouldClear = chatOpen && (currentChatPartner === data.by || currentChatPartner === data.partner);
+        }
+        
+        if (shouldClear) {
+            const container = document.getElementById('chatMessages');
+            if (container) container.innerHTML = '';
+        }
+    });
+
+    socket.on('like_update', data => {
+        const el = document.getElementById('like-count-' + data.comment_id);
+        if (el) {
+            el.textContent = data.likes_count;
+            // Animación breve para indicar cambio
+            el.style.transition = 'transform 0.2s';
+            el.style.transform = 'scale(1.4)';
+            setTimeout(() => { el.style.transform = 'scale(1)'; }, 200);
+        }
+    });
+
+    socket.on('user_typing', data => {
+        const indicator = document.getElementById('chatTypingIndicator');
+        const nameEl = document.getElementById('chatTypingName');
+        if (indicator && nameEl) {
+            nameEl.textContent = data.display || data.username;
+            indicator.style.display = 'block';
+        }
+    });
+
+    socket.on('user_stop_typing', () => {
+        const indicator = document.getElementById('chatTypingIndicator');
+        if (indicator) indicator.style.display = 'none';
+    });
+}
+
+function refreshOnlinePanel() {
+    const div = document.getElementById('chatOnlineUsers');
+    const list = document.getElementById('onlineUsersList');
+    if (!div || !list || !currentChatPartner) return;
+
+    const partnerEl = document.getElementById('chatPartnerName');
+    const partnerDisplay = partnerEl ? partnerEl.textContent : currentChatPartner;
+    const partnerOnline = onlineUsers.has(currentChatPartner);
+
+    list.innerHTML = `
+        <div class="chat-online-user">
+            <span class="chat-online-user-dot"></span>
+            <span>Tú</span>
+        </div>
+        <div class="chat-online-user" style="opacity:${partnerOnline ? 1 : 0.55}">
+            <span class="chat-online-user-dot" style="background:${partnerOnline ? '#28a745' : '#bbb'};${partnerOnline ? '' : 'box-shadow:none;animation:none;'}"></span>
+            <span>${partnerDisplay}</span>
+            ${partnerOnline ? '' : '<small style="color:#aaa;font-size:.7rem;"> · desconectado</small>'}
+        </div>`;
+    div.style.display = 'block';
+}
+
+function appendMessage(senderDisplay, content, isMe, time, imagePath, msgId, pendingKey) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'chat-message ' + (isMe ? 'mine' : 'theirs');
+    if (msgId) div.dataset.msgId = msgId;
+    if (pendingKey) div.dataset.pendingKey = pendingKey;
+    let contentHtml = '';
+    if (imagePath) {
+        const deleteBtn = msgId
+            ? `<button class="btn btn-sm btn-danger mt-1" style="font-size:0.72rem;padding:2px 8px;" onclick="deleteChatMessage(${msgId}, this)"><i class="bi bi-trash"></i></button>`
+            : '';
+        const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(imagePath);
+        const mediaHtml = isVideo
+            ? `<video src="${imagePath}" controls style="max-width:100%;max-height:300px;border-radius:8px;display:block;"></video>`
+            : `<img src="${imagePath}" style="max-width:100%;max-height:280px;border-radius:8px;display:block;">`;
+        contentHtml = `${mediaHtml}
+            <div class="d-flex gap-1 mt-1">
+                <a href="${imagePath}" download class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i></a>
+                ${deleteBtn}
+            </div>`;
+    } else {
+        contentHtml = linkify(content || '');
+    }
+    const statusHtml = isMe ? `<span class="msg-status" style="font-size:0.7rem;opacity:0.7;margin-left:4px;" title="Enviado">✓</span>` : '';
+    const _isNita2 = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+    const textDeleteBtn = (!imagePath && (isMe || _isNita2) && msgId)
+        ? `<button class="btn btn-sm btn-link p-0 ms-1" style="font-size:0.68rem;color:rgba(255,255,255,0.55);line-height:1;" onclick="deleteChatMessage(${msgId}, this)" title="Eliminar"><i class="bi bi-trash"></i></button>`
+        : '';
+    const textEditBtn = (!imagePath && isMe && msgId)
+        ? `<button class="btn btn-sm btn-link p-0 ms-1" style="font-size:0.68rem;color:rgba(255,255,255,0.55);line-height:1;" onclick="editChatMessage(${msgId}, this)" title="Editar"><i class="bi bi-pencil"></i></button>`
+        : '';
+    div.innerHTML = `
+        <div class="chat-message-sender">${senderDisplay}</div>
+        <div class="chat-message-content">${contentHtml}</div>
+        <div class="chat-message-time">${time}${statusHtml}${textEditBtn}${textDeleteBtn}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠️ PROTEGIDO: NO MODIFICAR ESTA FUNCIÓN - El chat debe iniciar SIN historial
+// EXCEPCIÓN: Superusuarios cargan historial automáticamente para preservar mensajes
+// ═══════════════════════════════════════════════════════════════════════════════
+function openChat(username) {
+    currentChatPartner = username;
+    document.getElementById('chatMessages').innerHTML = '';
+    // Mostrar botón 📢 solo cuando el partner es nitalaosita
+    const _admBtn = document.getElementById('adminMsgOpenBtn');
+    if (_admBtn) _admBtn.style.display = (username === 'nitalaosita') ? 'inline-flex' : 'none';
+
+    console.log('openChat called with:', username, 'currentChatType:', currentChatType);
+
+    initSocket();
+
+    // ⚠️ Superusuarios y nitalaosita cargan historial automáticamente para preservar mensajes
+    // Usuarios normales NO cargan historial por defecto - el chat empieza limpio
+    const isSuperuser = '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+    const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+    if (isSuperuser || isNita) {
+        // Cargar historial inmediatamente
+        console.log('Loading chat history immediately');
+        loadChatHistory();
+    }
+    // loadChatHistory(); // Comentado para empezar de cero - NO DESCOMENTAR
+
+    // Cargar alias propio
+    loadMyAlias();
+
+    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
+    modal.show();
+
+    // Unirse a la sala Socket.IO y pedir estado online actualizado
+    socket.emit('join_chat', { partner: username, chat_type: currentChatType });
+    socket.emit('get_online');  // online_list response llamará refreshOnlinePanel
+
+    // Mostrar usuarios ficticios conectados (solo nitalaosita)
+    if (typeof renderFakeOnlineUsers === 'function') {
+        renderFakeOnlineUsers();
+    }
+
+    // Marcar leídos
+    fetch('/chat/mark-read/' + encodeURIComponent(username), { method: 'POST' })
+        .then(() => updateUnreadBadge());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chat de moderadoras para nitalaosita
+// ═══════════════════════════════════════════════════════════════════════════════
+function openMaskedChat(displayName, realUsername) {
+    currentChatPartner = realUsername;
+    document.getElementById('chatMessages').innerHTML = '';
+    
+    // Guardar el alias del chat para este partner
+    fetch('/chat/set-partner-alias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partner: realUsername, alias: displayName })
+    }).catch(() => {});
+
+    initSocket();
+
+    // Cargar historial del chat
+    loadChatHistory();
+
+    // Cargar alias propio
+    loadMyAlias();
+
+    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
+    modal.show();
+
+    // Unirse a la sala Socket.IO con el usuario real
+    socket.emit('join_chat', { partner: realUsername });
+    socket.emit('get_online');
+
+    // Mostrar usuarios ficticios para nitalaosita
+    const fakeOnlineContainer = document.getElementById('fakeOnlineUsers');
+    if (fakeOnlineContainer) {
+        fakeOnlineContainer.style.display = 'block';
+        if (typeof renderFakeOnlineUsers === 'function') {
+            renderFakeOnlineUsers();
+        }
+    }
+
+    // Marcar leídos
+    fetch('/chat/mark-read/' + encodeURIComponent(realUsername), { method: 'POST' })
+        .then(() => updateUnreadBadge());
+    
+    // Limpiar el input
+    const userSearchInput = document.getElementById('userSearchInput');
+    if (userSearchInput) userSearchInput.value = '';
+    
+    // Cerrar el modal de búsqueda si está abierto
+    const privateChatModal = document.getElementById('privateChatModal');
+    if (privateChatModal) {
+        const modalInstance = bootstrap.Modal.getInstance(privateChatModal);
+        if (modalInstance) modalInstance.hide();
+    }
+}
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+function openModeratorChat() {
+    console.log('openModeratorChat called');
+    currentChatType = 'moderator';
+    currentChatPartner = 'nitalaosita';  // Usar nitalaosita como partner para que coincida con los mensajes
+    console.log('Opening moderator chat, partner:', currentChatPartner, 'type:', currentChatType);
+    
+    // Llamar directamente sin delay
+    openChat('nitalaosita');
+}
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_superuser %}
+function openSuperModeratorChat() {
+    currentChatType = 'moderator';
+    currentChatPartner = 'nitalaosita';
+    
+    // Open chat with nitalaosita in moderator mode
+    openChat('nitalaosita');
+}
+{% endif %}
+
+function loadChatHistory() {
+    if (!currentChatPartner) return;
+    const chatTypeParam = currentChatType ? `?chat_type=${currentChatType}` : '';
+    console.log('Loading chat history for:', currentChatPartner, 'type:', currentChatType, 'param:', chatTypeParam);
+    fetch('/chat/messages/' + encodeURIComponent(currentChatPartner) + chatTypeParam)
+        .then(r => r.json())
+        .then(data => {
+            console.log('Chat history loaded:', data.messages.length, 'messages');
+            console.log('Messages:', data.messages);
+            document.getElementById('chatMessages').innerHTML = '';
+            if (data.display_name) {
+                const el = document.getElementById('chatPartnerName');
+                if (el) el.textContent = data.display_name;
+            }
+            const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+            data.messages.forEach(m => {
+                console.log('Appending message:', m.sender_name, m.receiver_name, m.content);
+                appendMessage(m.display_sender_name || m.sender_name, m.content, m.is_me, m.created_at, m.image_path);
+            });
+        })
+        .catch(e => {
+            console.error('Error loading chat history:', e);
+        });
+}
+
+function linkify(text) {
+    return text.replace(/(https?:\/\/[^\s<>"'\)]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+function updateUnreadBadge() {
+    fetch('/chat/unread-count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('chatUnreadBadge');
+            if (badge) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }).catch(() => {});
+}
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+window._nitaAdminModal = null;
+function initNitaAdminModal() {
+    if (!window._nitaAdminModal) window._nitaAdminModal = new bootstrap.Modal(document.getElementById('nitaAdminAlertModal'));
+    return window._nitaAdminModal;
+}
+{% endif %}
+
+let _confirmModal = null;
+let _confirmCallback = null;
+
+function showConfirm(msg, onOk, opts) {
+    opts = opts || {};
+    document.getElementById('confirmModalMsg').textContent = msg;
+    document.getElementById('confirmModalEmoji').textContent = opts.emoji || '⚠️';
+    const okBtn = document.getElementById('confirmModalOk');
+    okBtn.textContent = opts.okLabel || 'Confirmar';
+    if (opts.danger) {
+        okBtn.style.background = 'linear-gradient(135deg,#e74c3c,#c0392b)';
+        document.getElementById('confirmModalContent').style.borderColor = '#e74c3c';
+        document.getElementById('confirmModalHeader').style.background = 'linear-gradient(135deg,#e74c3c,#c0392b)';
+    } else {
+        okBtn.style.background = 'linear-gradient(135deg,#ff6b9d,#845ec2)';
+        document.getElementById('confirmModalContent').style.borderColor = '#ff6b9d';
+        document.getElementById('confirmModalHeader').style.background = 'linear-gradient(135deg,#ff6b9d,#845ec2)';
+    }
+    _confirmCallback = onOk;
+    if (!_confirmModal) _confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    _confirmModal.show();
+    // Elevar el backdrop generado por Bootstrap para este modal
+    setTimeout(() => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length) backdrops[backdrops.length - 1].style.zIndex = '1075';
+    }, 10);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmModalOk').addEventListener('click', function() {
+        _confirmModal.hide();
+        if (_confirmCallback) { _confirmCallback(); _confirmCallback = null; }
+    });
+    document.getElementById('confirmModalCancel').addEventListener('click', function() {
+        _confirmModal.hide();
+        _confirmCallback = null;
+    });
+});
+
+function deleteChatMessage(msgId, btn) {
+    showConfirm('¿Eliminar esta imagen del chat?', function() {
+        btn.disabled = true;
+        fetch('/chat/delete-message/' + msgId, { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    const el = document.querySelector(`.chat-message[data-msg-id="${msgId}"]`);
+                    if (el) {
+                        el.style.transition = 'opacity 0.25s';
+                        el.style.opacity = '0';
+                        setTimeout(() => el.remove(), 260);
+                    }
+                } else {
+                    btn.disabled = false;
+                }
+            })
+            .catch(() => { btn.disabled = false; });
+    }, { emoji: '🗑️', okLabel: 'Eliminar', danger: true });
+}
+
+function editChatMessage(msgId, btn) {
+    const msgEl = btn.closest('.chat-message');
+    const contentEl = msgEl.querySelector('.chat-message-content');
+    const currentContent = contentEl.textContent.trim();
+    
+    const newContent = prompt('Editar mensaje:', currentContent);
+    if (newContent === null || newContent.trim() === '') return;
+    
+    btn.disabled = true;
+    fetch('/chat/edit-message/' + msgId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent.trim() })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            contentEl.innerHTML = linkify(d.content);
+            // Add edited indicator
+            const timeEl = msgEl.querySelector('.chat-message-time');
+            if (timeEl && !timeEl.innerHTML.includes('(editado)')) {
+                timeEl.innerHTML += ' <span style="font-size:0.65rem;opacity:0.6;">(editado)</span>';
+            }
+        } else {
+            alert('Error: ' + (d.error || 'No se pudo editar'));
+            btn.disabled = false;
+        }
+    })
+    .catch(() => {
+        alert('Error de conexión');
+        btn.disabled = false;
+    });
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const content = input.value.trim();
+    if (!content || !currentChatPartner || !socket) return;
+
+    // Mostrar mensaje inmediatamente (UI optimista)
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+    const pendingKey = 'pending_' + Date.now();
+    appendMessage(me, content, true, timeStr, null, null, pendingKey);
+
+    socket.emit('send_message', { partner: currentChatPartner, content, pending_key: pendingKey, chat_type: currentChatType });
+    playSendSound();
+    input.value = '';
+
+    // Detener typing
+    socket.emit('stop_typing', { partner: currentChatPartner });
+    clearTimeout(typingTimer);
+    const indicator = document.getElementById('chatTypingIndicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
+function onChatInputTyping() {
+    if (!socket || !currentChatPartner) return;
+    socket.emit('typing', { partner: currentChatPartner });
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        socket.emit('stop_typing', { partner: currentChatPartner });
+    }, 3000);
+}
+
+function sendChatImage(file) {
+    if (!currentChatPartner) return;
+    const formData = new FormData();
+    formData.append('receiver_name', currentChatPartner);
+    formData.append('image', file);
+    if (currentChatType) {
+        formData.append('chat_type', currentChatType);
+    }
+    fetch('/chat/send-image', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(d => { if (d.success) loadChatHistory(); else alert('Error: ' + d.error); })
+        .catch(() => alert('Error al enviar imagen'));
+}
+
+function loadMyAlias() {
+    const input = document.getElementById('chatDisplayName');
+    if (!input) return;
+    // Cargar desde backend
+    fetch('/chat/get-alias')
+        .then(r => r.json())
+        .then(d => {
+            if (d.success && d.alias) {
+                input.value = d.alias;
+                localStorage.setItem('chat_alias', d.alias);
+            }
+        })
+        .catch(() => {
+            // Fallback a localStorage
+            const saved = localStorage.getItem('chat_alias');
+            if (saved) input.value = saved;
+        });
+}
+
+function saveMyAlias() {
+    const input = document.getElementById('chatDisplayName');
+    if (!input) return;
+    const alias = input.value.trim();
+    localStorage.setItem('chat_alias', alias);
+    // Guardar en backend
+    fetch('/chat/set-alias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alias })
+    }).catch(() => {});
+}
+
+// Search functionality
+let userSearchTimeout = null;
+let _searchTimeout = null;
+let _activeFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Actualizar badge de mensajes no leídos
+    updateUnreadBadge();
+    setInterval(updateUnreadBadge, 10000);
+    
+    // Iniciar Socket.IO y badge al cargar página
+    initSocket();
+    
+    // Chat type toggle for nitalaosita
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    const privateChatTypeBtn = document.getElementById('privateChatTypeBtn');
+    const moderatorChatTypeBtn = document.getElementById('moderatorChatTypeBtn');
+    
+    if (privateChatTypeBtn && moderatorChatTypeBtn) {
+        privateChatTypeBtn.addEventListener('click', function() {
+            currentChatType = 'private';
+            privateChatTypeBtn.classList.add('active');
+            moderatorChatTypeBtn.classList.remove('active');
+            // Reload chat history if chat is open
+            if (currentChatPartner) {
+                loadChatHistory();
+            }
+        });
+        
+        moderatorChatTypeBtn.addEventListener('click', function() {
+            currentChatType = 'moderator';
+            moderatorChatTypeBtn.classList.add('active');
+            privateChatTypeBtn.classList.remove('active');
+            // Open chat with bolita if not already open
+            if (!currentChatPartner || currentChatType !== 'moderator') {
+                openChat('bolita');
+            } else {
+                loadChatHistory();
+            }
+        });
+    }
+    {% endif %}
+    
+    // Abrir modal de búsqueda (instancia única para evitar backdrop huérfano)
+    const searchModalBtn = document.getElementById('searchModalBtn');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const _searchModalEl = document.getElementById('searchModal');
+    if (searchModalBtn && _searchModalEl) {
+        searchModalBtn.addEventListener('click', function() {
+            const modal = bootstrap.Modal.getOrCreateInstance(_searchModalEl);
+            modal.show();
+            setTimeout(() => { if (searchInput) searchInput.focus(); }, 350);
+        });
+        // Al cerrar: limpiar backdrop Y ejecutar carga pendiente
+        _searchModalEl.addEventListener('hidden.bs.modal', function() {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+            if (_pendingSearchLoad) {
+                const p = _pendingSearchLoad;
+                _pendingSearchLoad = null;
+                if (typeof loadImage === 'function' && document.getElementById('currentImageId')) {
+                    loadImage(p.id, p.isVideo);
+                } else {
+                    window.location.href = '/?image_id=' + p.id;
+                }
+            }
+        });
+        // Capturar resultado seleccionado ANTES del cierre del modal
+        _searchModalEl.addEventListener('click', function(e) {
+            const item = e.target.closest('[data-search-id]');
+            if (item) {
+                _pendingSearchLoad = {
+                    id: parseInt(item.dataset.searchId),
+                    isVideo: item.dataset.searchVideo === 'true'
+                };
+            }
+        });
+        // Limpiar búsqueda al abrir
+        _searchModalEl.addEventListener('show.bs.modal', function() {
+            _searchModalEl.style.removeProperty('display');
+            const si = document.getElementById('searchInput');
+            if (si) { si.value = ''; si.focus && setTimeout(() => si.focus(), 350); }
+            const sr = document.getElementById('searchResults');
+            if (sr) sr.innerHTML = '';
+            const ss = document.getElementById('searchStatus');
+            if (ss) ss.textContent = '';
+        });
+    }
+
+    // Filtros de formato
+    document.querySelectorAll('.search-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.search-filter-btn').forEach(b => {
+                b.classList.remove('btn-fun-pink');
+                b.classList.add('btn-outline-light');
+            });
+            this.classList.remove('btn-outline-light');
+            this.classList.add('btn-fun-pink');
+            _activeFilter = this.dataset.filter;
+            const q = searchInput ? searchInput.value.trim() : '';
+            if (q.length >= 1) performSearch(q, _activeFilter);
+        });
+    });
+
+    // Búsqueda en vivo
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            const status = document.getElementById('searchStatus');
+            if (query.length === 0) {
+                document.getElementById('searchResults').innerHTML = '';
+                if (status) status.textContent = '';
+                return;
+            }
+            if (status) status.textContent = 'Buscando...';
+            clearTimeout(_searchTimeout);
+            _searchTimeout = setTimeout(() => performSearch(query, _activeFilter), 250);
+        });
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(_searchTimeout);
+                performSearch(this.value.trim(), _activeFilter);
+            }
+        });
+    }
+
+    // Limpiar búsqueda
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) { searchInput.value = ''; searchInput.focus(); }
+            document.getElementById('searchResults').innerHTML = '';
+            const status = document.getElementById('searchStatus');
+            if (status) status.textContent = '';
+        });
+    }
+    
+    // Private chat functionality
+    const privateChatBtn = document.getElementById('privateChatBtn');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const usersList = document.getElementById('usersList');
+    
+    if (privateChatBtn) {
+        privateChatBtn.addEventListener('click', function() {
+            {% if current_user.is_authenticated and current_user.is_superuser and current_user.username != 'nitalaosita' %}
+            // Superusuario (excepto nitalaosita): abrir chat directo con nitalaosita
+            currentChatType = 'private';
+            initSocket();
+            openChat('nitalaosita');
+            const optMenu = document.getElementById('optionsMenu');
+            if (optMenu) optMenu.style.display = 'none';
+            {% elif current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+            // nitalaosita: abrir chat directo con doll en modo privado
+            currentChatType = 'private';
+            const privateChatTypeBtn = document.getElementById('privateChatTypeBtn');
+            const moderatorChatTypeBtn = document.getElementById('moderatorChatTypeBtn');
+            if (privateChatTypeBtn) privateChatTypeBtn.classList.add('active');
+            if (moderatorChatTypeBtn) moderatorChatTypeBtn.classList.remove('active');
+            initSocket();
+            openChat('doll');
+            const optMenu = document.getElementById('optionsMenu');
+            if (optMenu) optMenu.style.display = 'none';
+            {% else %}
+            // Otros usuarios: abrir chat directo con nitalaosita
+            initSocket();
+            openChat('nitalaosita');
+            const optMenu = document.getElementById('optionsMenu');
+            if (optMenu) optMenu.style.display = 'none';
+            {% endif %}
+        });
+    }
+    
+    if (userSearchInput && usersList) {
+        userSearchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (userSearchTimeout) clearTimeout(userSearchTimeout);
+            
+            // Detectar si nitalaosita escribe @nombre para abrir chat enmascarado con doll
+            {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+            if (query.startsWith('@') && query.length > 1) {
+                // Esperar a que el usuario termine de escribir
+                userSearchTimeout = setTimeout(() => {
+                    searchUsers(query);
+                }, 300);
+                return;
+            }
+            {% endif %}
+            
+            if (query.length < 2) {
+                loadUsers();
+                return;
+            }
+            
+            userSearchTimeout = setTimeout(() => {
+                searchUsers(query);
+            }, 300);
+        });
+    }
+    
+    // Chat send button and input
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const chatInput = document.getElementById('chatInput');
+    const chatImageBtn = document.getElementById('chatImageBtn');
+    const chatImageInput = document.getElementById('chatImageInput');
+    const chatDisplayName = document.getElementById('chatDisplayName');
+    
+    if (chatSendBtn && chatInput) {
+        chatSendBtn.addEventListener('click', sendChatMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+        chatInput.addEventListener('input', onChatInputTyping);
+    }
+    
+    // Guardar alias cuando cambia
+    if (chatDisplayName) {
+        chatDisplayName.addEventListener('blur', saveMyAlias);
+        chatDisplayName.addEventListener('change', saveMyAlias);
+    }
+    
+    // Chat image upload
+    if (chatImageBtn && chatImageInput) {
+        chatImageBtn.addEventListener('click', function() {
+            chatImageInput.click();
+        });
+        
+        chatImageInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                sendChatImage(file);
+                chatImageInput.value = '';
+            }
+        });
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Botón de actualizar chat
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const refreshChatBtn = document.getElementById('refreshChatBtn');
+    if (refreshChatBtn) {
+        refreshChatBtn.addEventListener('click', function() {
+            if (currentChatPartner) {
+                loadChatHistory();
+            }
+        });
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // ⚠️ PROTEGIDO: NO MODIFICAR - El botón limpiar debe limpiar forzadamente el chat
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', function() {
+            if (!currentChatPartner) return;
+            showConfirm('¿Limpiar el historial de este chat? Esta acción no se puede deshacer.', function() {
+                // Limpiar visualmente el chat inmediatamente
+                document.getElementById('chatMessages').innerHTML = '';
+                // Hacer el fetch al backend para limpiar
+                const chatTypeParam = currentChatType ? `?chat_type=${currentChatType}` : '';
+                fetch('/chat/clear/' + encodeURIComponent(currentChatPartner) + chatTypeParam, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => { 
+                        if (d.success) {
+                            // Chat ya está limpio visualmente, no recargar historial
+                        }
+                    })
+                    .catch(() => {});
+            }, { emoji: '🧹', okLabel: 'Limpiar', danger: false });
+        });
+    }
+    
+    // Load history button (Preservar conversación)
+    const loadHistoryBtn = document.getElementById('loadHistoryBtn');
+    if (loadHistoryBtn) {
+        loadHistoryBtn.addEventListener('click', function() {
+            if (!currentChatPartner) return;
+            loadChatHistory();
+        });
+    }
+    
+    // Clear all chats button
+    const clearAllChatsBtn = document.getElementById('clearAllChatsBtn');
+    if (clearAllChatsBtn) {
+        clearAllChatsBtn.addEventListener('click', function() {
+            showConfirm('¿Eliminar TODOS los chats de TODOS los usuarios? Esta acción es IRREVERSIBLE.', function() {
+                showConfirm('🚨 ÚLTIMA OPORTUNIDAD — ¿Realmente borrar TODO?', function() {
+                    fetch('/chat/clear-all', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(d => { if (d.success) loadChatHistory(); })
+                        .catch(() => {});
+                }, { emoji: '🚨', okLabel: '¡Borrar TODO!', danger: true });
+            }, { emoji: '⚠️', okLabel: 'Sí, continuar', danger: true });
+        });
+    }
+    
+    // 📢 Admin modal: mostrar botón solo cuando el partner es nitalaosita
+    {% if current_user.is_authenticated and current_user.is_superuser %}
+    const adminMsgOpenBtn = document.getElementById('adminMsgOpenBtn');
+    const adminMsgSendBtn = document.getElementById('adminMsgSendBtn');
+
+    if (adminMsgSendBtn) {
+        adminMsgSendBtn.addEventListener('click', function() {
+            const text = (document.getElementById('adminMsgText').value || '').trim();
+            if (!text) return;
+            if (!socket) { alert('Conectando...'); return; }
+            adminMsgSendBtn.disabled = true;
+            socket.emit('send_admin_modal', { message: text });
+            // Cerrar modal y limpiar
+            const m = bootstrap.Modal.getInstance(document.getElementById('adminMsgModal'));
+            if (m) m.hide();
+            document.getElementById('adminMsgText').value = '';
+            adminMsgSendBtn.disabled = false;
+        });
+    }
+    {% endif %}
+
+    // 🚩 Nitalaosita: función de reporte de comentarios
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    let _nitaReportModal = null;
+    window.nitaReport = function(commentId, commentUser) {
+        const infoEl = document.getElementById('nitaReportCommentInfo');
+        if (infoEl) infoEl.textContent = 'Comentario de: ' + (commentUser || '');
+        if (!_nitaReportModal) {
+            const el = document.getElementById('nitaReportModal');
+            if (el) _nitaReportModal = new bootstrap.Modal(el);
+        }
+        if (_nitaReportModal) _nitaReportModal.show();
+    };
+    // Verificar si el botón Reportar debe mostrarse (sin recargar página)
+    fetch('/nita-report/check')
+        .then(r => r.json())
+        .then(d => {
+            if (d.enabled) {
+                document.querySelectorAll('.nita-report-btn').forEach(b => b.classList.remove('d-none'));
+                // Actualizar textos del modal con los valores del servidor
+                const eEl = document.getElementById('nitaReportEmoji');
+                const tEl = document.getElementById('nitaReportTitle');
+                const mEl = document.getElementById('nitaReportMsg');
+                if (eEl && d.emoji) eEl.textContent = d.emoji;
+                if (tEl && d.title) tEl.textContent = d.title;
+                if (mEl && d.msg)   mEl.textContent = d.msg;
+            }
+        })
+        .catch(() => {});
+    {% endif %}
+
+    // 🌸 Nitalaosita: modal de BIENVENIDA (check en carga + socket nita_welcome)
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    let _nitaWelcomeModal = null;
+    function _showNitaWelcome(data) {
+        document.getElementById('nitaWelcomeEmoji').textContent = data.emoji || '🌸';
+        document.getElementById('nitaWelcomeTitle').textContent = data.title || '¡Bienvenida! 💖';
+        
+        // Convertir URLs en enlaces clickeables de forma segura (XSS-safe)
+        var msg = data.msg || '';
+        var div = document.createElement('div');
+        div.textContent = msg;
+        var escaped = div.innerHTML;
+        var urlPattern = /(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        var html = escaped.replace(urlPattern, '<a href="$1" target="_blank" style="color:#ff6b9d;text-decoration:underline;font-weight:700;">$1</a>');
+        
+        document.getElementById('nitaWelcomeMsg').innerHTML = html;
+        
+        if (!_nitaWelcomeModal)
+            _nitaWelcomeModal = new bootstrap.Modal(document.getElementById('nitaWelcomeModal'));
+        _nitaWelcomeModal.show();
+    }
+    const _nwCloseBtn = document.getElementById('nitaWelcomeCloseBtn');
+    if (_nwCloseBtn) {
+        _nwCloseBtn.addEventListener('click', function() {
+            if (_nitaWelcomeModal) _nitaWelcomeModal.hide();
+            fetch('/nita-welcome/dismiss', { method: 'POST' }).catch(() => {});
+        });
+    }
+    // Check en carga de página
+    fetch('/nita-welcome/check')
+        .then(r => r.json())
+        .then(d => { if (d.active && d.msg) _showNitaWelcome(d); })
+        .catch(() => {});
+    {% endif %}
+
+    // 📩 Nitalaosita: recibir admin_modal
+    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+    const nitaAlertCloseBtn = document.getElementById('nitaAdminAlertClose');
+    if (nitaAlertCloseBtn) {
+        nitaAlertCloseBtn.addEventListener('click', function() {
+            if (window._nitaAdminModal) window._nitaAdminModal.hide();
+        });
+    }
+    // Inicializar socket en page load para recibir mensajes admin sin abrir el chat
+    initSocket();
+    {% endif %}
+
+    // Close chat modal cleanup
+    const chatModal = document.getElementById('chatModal');
+    if (chatModal) {
+        chatModal.addEventListener('hidden.bs.modal', function() {
+            if (socket && currentChatPartner) socket.emit('leave_chat', { partner: currentChatPartner });
+            clearTimeout(typingTimer);
+            currentChatPartner = null;
+            const indicator = document.getElementById('chatTypingIndicator');
+            if (indicator) indicator.style.display = 'none';
+        });
+    }
+});
+
+function performSearch(query, filter) {
+    if (!query) return;
+    filter = filter || 'all';
+    const container = document.getElementById('searchResults');
+    const status = document.getElementById('searchStatus');
+    container.innerHTML = '';
+
+    const q = encodeURIComponent(query);
+    const f = encodeURIComponent(filter);
+    Promise.all([
+        fetch('/search?q=' + q + '&type=' + f).then(r => r.json()).catch(() => []),
+        fetch('/search-folder?q=' + q + '&type=' + f).then(r => r.json()).catch(() => [])
+    ]).then(([dbResults, diskResults]) => {
+        const seen = new Set();
+        const combined = [];
+        for (const r of [...dbResults, ...diskResults]) {
+            if (!seen.has(r.id)) { seen.add(r.id); combined.push(r); }
+        }
+
+        if (status) status.textContent = combined.length > 0
+            ? combined.length + ' resultado' + (combined.length !== 1 ? 's' : '') + ' encontrado' + (combined.length !== 1 ? 's' : '')
+            : 'Sin resultados para "' + query + '"';
+
+        if (combined.length === 0) {
+            container.innerHTML = `<div class="text-center text-muted py-4">
+                <i class="bi bi-search" style="font-size:2rem;"></i>
+                <p class="mt-2">No se encontraron resultados</p>
+            </div>`;
+            return;
+        }
+
+        container.innerHTML = combined.map(img => `
+            <div class="search-result-item d-flex align-items-center gap-3 p-2 mb-1"
+                 onclick="closeSearchAndLoad(${img.id}, ${img.is_video})"
+                 style="cursor:pointer;border-radius:8px;background:rgba(255,255,255,0.05);transition:background 0.15s;"
+                 onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+                 onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <img src="/img/${img.id}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;flex-shrink:0;pointer-events:none;" alt="" onerror="this.style.opacity='0.4'">
+                <div style="min-width:0;pointer-events:none;">
+                    <div style="font-weight:600;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${img.is_video ? '🎬 ' : '📷 '}${img.filename}
+                    </div>
+                    <div style="font-size:0.78rem;color:#aaa;">${img.from_disk ? '📁 Disco — ' : ''}${img.folder || 'Sin carpeta'}</div>
+                    <div class="mt-1">
+                        <span class="badge" style="background:#e91e8c;font-size:0.72rem;pointer-events:none;">Cargar en visor</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+let _pendingSearchLoad = null;
+
+function closeSearchAndLoad(imageId, isVideo) {
+    console.log("closeSearchAndLoad triggered:", imageId, isVideo);
+    
+    // 1. Intentar hacer click en el botón de cerrar nativo de Bootstrap para que limpie su estado
+    var m = document.getElementById('searchModal');
+    if (m) {
+        var closeBtn = m.querySelector('[data-bs-dismiss="modal"]');
+        if (closeBtn) {
+            try { closeBtn.click(); } catch(e) {}
+        }
+        
+        // 2. Forzar ocultación por CSS de inmediato (brutal y garantizado)
+        m.style.setProperty('display', 'none', 'important');
+        m.classList.remove('show');
+        m.setAttribute('aria-hidden', 'true');
+        m.removeAttribute('aria-modal');
+    }
+    
+    // 3. Destruir cualquier backdrop y limpiar clases de bloqueo del body
+    document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+        try { el.remove(); } catch(e) {}
+    });
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // 4. Cargar la imagen o redireccionar
+    if (typeof loadImage === 'function' && document.getElementById('currentImageId')) {
+        console.log("Loading image inline:", imageId);
+        loadImage(imageId, !!isVideo);
+    } else {
+        console.log("Redirecting to image:", imageId);
+        window.location.href = '/?image_id=' + imageId;
+    }
+}
+
+function loadImage(imageId) {
+    // Redirigir a la página principal con la imagen seleccionada
+    window.location.href = '/?image_id=' + imageId;
+}
+
+function loadUsers() {
+    const chatTypeParam = currentChatType ? `?chat_type=${currentChatType}` : '';
+    fetch('/chat/users' + chatTypeParam)
+        .then(r => r.json())
+        .then(users => {
+            displayUsers(users);
+        })
+        .catch(e => console.error('Error loading users:', e));
+}
+
+function searchUsers(query) {
+    const chatTypeParam = currentChatType ? `&chat_type=${currentChatType}` : '';
+    fetch('/chat/users?q=' + encodeURIComponent(query) + chatTypeParam)
+        .then(r => r.json())
+        .then(users => {
+            displayUsers(users);
+        })
+        .catch(e => console.error('Error searching users:', e));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chat de moderadoras para nitalaosita
+// ═══════════════════════════════════════════════════════════════════════════════
+function displayUsers(users) {
+    const container = document.getElementById('usersList');
+    
+    // Para nitalaosita, mostrar solo las moderadoras
+    const currentUser = '{{ current_user.username if current_user.is_authenticated else "" }}';
+    if (currentUser === 'nitalaosita') {
+        // Filtrar solo las moderadoras (bolita y doll)
+        const moderators = users.filter(u => u.email === 'bolita@mummy.com' || u.email === 'doll@mummy.com');
+        users = moderators;
+    }
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="search-no-results">No se encontraron usuarios</div>';
+    } else {
+        container.innerHTML = users.map(u => {
+            const isOnline = onlineUsers.has(u.username);
+            const displayName = u.display_name || u.username;
+            const isModerator = u.email === 'bolita@mummy.com' || u.email === 'doll@mummy.com';
+            return `
+            <div class="search-result-item" onclick="openPrivateChat('${u.username}')">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="chat-online-user-dot" style="background:${isOnline ? '#28a745' : '#ccc'};${isOnline ? '' : 'box-shadow:none;animation:none;'};width:12px;height:12px;"></span>
+                    <div class="search-result-info">
+                        <div class="search-result-name">${displayName}</div>
+                        <div class="search-result-folder">${isModerator ? 'Moderadora' : (u.is_superuser ? 'Superusuario' : 'Usuario')}</div>
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+    }
+}
+
+function openPrivateChat(username) {
+    // Cerrar modal de selección de usuarios
+    const privateChatModal = bootstrap.Modal.getInstance(document.getElementById('privateChatModal'));
+    if (privateChatModal) privateChatModal.hide();
+    
+    // Abrir modal de chat
+    if (typeof openChat === 'function') {
+        openChat(username);
+    } else {
+        // Si la función openChat no está disponible, redirigir a index
+        window.location.href = '/?chat_with=' + encodeURIComponent(username);
+    }
+}
+</script>
+{% block scripts %}{% endblock %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Limpiar localStorage de referencias antiguas a CamilaCR
+    const chatAlias = localStorage.getItem('chat_alias');
+    if (chatAlias && (chatAlias.includes('CamilaCR') || chatAlias.includes('camila'))) {
+        localStorage.removeItem('chat_alias');
+    }
+    
+    var alerts = document.querySelectorAll('.alert');
+    if (alerts.length) {
+        setTimeout(function () {
+            alerts.forEach(function (el) {
+                bootstrap.Alert.getOrCreateInstance(el).close();
+            });
+        }, 3000);
+    }
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .catch(err => console.warn('SW no registrado:', err));
+    });
+}
+
+// PWA Installation
+let deferredPrompt;
+const installBtn = document.getElementById('installPWA');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'inline-flex';
+});
+
+installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none';
+});
+
+// Evitar FOUC - mostrar contenido cuando esté cargado
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('loaded');
+});
+
+// Emoji picker - inicializar después de que el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const chatInput = document.getElementById('chatInput');
+    
+    // Lista de emojis nativos (sin CDN)
+    const emojis = [
+        '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃',
+        '😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙',
+        '😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔',
+        '🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥',
+        '😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮',
+        '🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎',
+        '🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳',
+        '🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖',
+        '😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬',
+        '👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👋','🖐️',
+        '✋','🖖','👏','🙌','👐','🤲','🤝','🙏','✍️','💪',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔',
+        '💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️',
+        '☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎',
+        '♈','♉','♊','♋','♌','♍','♎','♏','♐','♑',
+        '♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶',
+        '🈚','🈸','🈺','🈷️','✴️','🆚','🉑','💮','🉐','㊙️',
+        '㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️',
+        '🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️',
+        '🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓',
+        '❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️',
+        '🔰','♻️','✅','🈯️','💹','❇️','✳️','❎','🌐','💠',
+        'Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️',
+        '🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧','🚻','🚮',
+        '🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗',
+        '🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣',
+        '6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️',
+        '⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬',
+        '◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️',
+        '↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂',
+        '🔄','🔃','🎵','🎶','➕','➖','➗','✖️','🟰','♾️',
+        '💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙',
+        '🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢',
+        '🔵','🟣','🟤','⚫','⚪','⬜','⬛','◼️','◻️','◾',
+        '◽','▪️','▫️','🔶','🔷','🔸','🔹','🔺','🔻','🔲',
+        '🔳','🏁','🚩','🎌','🏴','🏳️','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🇦🇨',
+        '🇦🇩','🇦🇪','🇦🇫','🇦🇬','🇦🇮','🇦🇱','🇦🇲','🇦🇴','🇦🇶','🇦🇷',
+        '🇦🇸','🇦🇹','🇦🇺','🇦🇼','🇦🇽','🇦🇿','🇧🇦','🇧🇧','🇧🇩','🇧🇪',
+        '🇧🇫','🇧🇬','🇧🇭','🇧🇮','🇧🇯','🇧🇱','🇧🇲','🇧🇳','🇧🇴','🇧🇶',
+        '🇧🇷','🇧🇸','🇧🇹','🇧🇻','🇧🇼','🇧🇾','🇧🇿','🇨🇦','🇨🇨','🇨🇩',
+        '🇨🇫','🇨🇬','🇨🇭','🇨🇮','🇨🇰','🇨🇱','🇨🇲','🇨🇳','🇨🇴','🇨🇵',
+        '🇨🇷','🇨🇺','🇨🇻','🇨🇼','🇨🇽','🇨🇾','🇨🇿','🇩🇪','🇩🇬','🇩🇯',
+        '🇩🇰','🇩🇲','🇩🇴','🇩🇿','🇪🇦','🇪🇨','🇪🇪','🇪🇬','🇪🇭','🇪🇷',
+        '🇪🇸','🇪🇹','🇪🇺','🇫🇮','🇫🇯','🇫🇰','🇫🇲','🇫🇴','🇫🇷','🇬🇦',
+        '🇬🇧','🇬🇩','🇬🇪','🇬🇫','🇬🇬','🇬🇭','🇬🇮','🇬🇱','🇬🇲','🇬🇳',
+        '🇬🇵','🇬🇶','🇬🇷','🇬🇸','🇬🇹','🇬🇺','🇬🇼','🇬🇾','🇭🇰','🇭🇲',
+        '🇭🇳','🇭🇷','🇭🇹','🇭🇺','🇮🇨','🇮🇩','🇮🇪','🇮🇱','🇮🇲','🇮🇳',
+        '🇮🇴','🇮🇶','🇮🇷','🇮🇸','🇮🇹','🇯🇪','🇯🇲','🇯🇴','🇯🇵','🇰🇪',
+        '🇰🇬','🇰🇭','🇰🇮','🇰🇲','🇰🇳','🇰🇵','🇰🇷','🇰🇼','🇰🇾','🇰🇿',
+        '🇱🇦','🇱🇧','🇱🇨','🇱🇮','🇱🇰','🇱🇷','🇱🇸','🇱🇹','🇱🇺','🇱🇻',
+        '🇱🇾','🇲🇦','🇲🇨','🇲🇩','🇲🇪','🇲🇫','🇲🇬','🇲🇭','🇲🇰','🇲🇱',
+        '🇲🇲','🇲🇳','🇲🇴','🇲🇵','🇲🇶','🇲🇷','🇲🇸','🇲🇹','🇲🇺','🇲🇻',
+        '🇲🇼','🇲🇽','🇲🇾','🇲🇿','🇳🇦','🇳🇨','🇳🇪','🇳🇫','🇳🇬','🇳🇮',
+        '🇳🇱','🇳🇴','🇳🇵','🇳🇷','🇳🇺','🇳🇿','🇴🇲','🇵🇦','🇵🇪','🇵🇫',
+        '🇵🇬','🇵🇭','🇵🇰','🇵🇱','🇵🇲','🇵🇳','🇵🇷','🇵🇸','🇵🇹','🇵🇼',
+        '🇵🇾','🇶🇦','🇷🇪','🇷🇴','🇷🇸','🇷🇺','🇷🇼','🇸🇦','🇸🇧','🇸🇨',
+        '🇸🇩','🇸🇪','🇸🇬','🇸🇭','🇸🇮','🇸🇯','🇸🇰','🇸🇱','🇸🇲','🇸🇳',
+        '🇸🇴','🇸🇷','🇸🇸','🇸🇹','🇸🇻','🇸🇽','🇸🇾','🇸🇿','🇹🇦','🇹🇨',
+        '🇹🇩','🇹🇫','🇹🇬','🇹🇭','🇹🇯','🇹🇰','🇹🇱','🇹🇲','🇹🇳','🇹🇴',
+        '🇹🇷','🇹🇹','🇹🇻','🇹🇼','🇹🇿','🇺🇦','🇺🇬','🇺🇲','🇺🇳','🇺🇸',
+        '🇺🇾','🇺🇿','🇻🇦','🇻🇨','🇻🇪','🇻🇬','🇻🇮','🇻🇳','🇻🇺','🇼🇫',
+        '🇼🇸','🇽🇰','🇾🇪','🇾🇹','🇿🇦','🇿🇲','🇿🇼','🏴󠁧󠁢󠁥󠁮󠁧󠁿','🏴󠁧󠁢󠁳󠁣󠁴󠁿','🏴󠁧󠁢󠁷󠁬󠁳󠁿'
+    ];
+    
+    // Inicializar emoji picker
+    if (emojiPicker) {
+        emojis.forEach(emoji => {
+            const btn = document.createElement('button');
+            btn.className = 'emoji-btn';
+            btn.textContent = emoji;
+            btn.addEventListener('click', () => {
+                if (chatInput) {
+                    const start = chatInput.selectionStart;
+                    const end = chatInput.selectionEnd;
+                    const text = chatInput.value;
+                    chatInput.value = text.substring(0, start) + emoji + text.substring(end);
+                    chatInput.focus();
+                    chatInput.selectionStart = chatInput.selectionEnd = start + emoji.length;
+                }
+                emojiPicker.style.display = 'none';
+            });
+            emojiPicker.appendChild(btn);
+        });
+    }
+    
+    // Toggle emoji picker
+    if (emojiBtn) {
+        emojiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'grid' : 'none';
+        });
+    }
+    
+    // Cerrar emoji picker al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+            emojiPicker.style.display = 'none';
+        }
+    });
+});
+
+// Simulación de usuarias conectadas para nitalaosita
+const fakeUserNames = [
+    'cabrita', 'micachu', 'danita', 'candycr', 'valesilla', 'cogedora',
+    'pedofilamama', 'coñita', 'lananita', 'mariama', 'putica', 'capibara',
+    'caliza', 'partials', 'panaca', 'crbabys', 'lanica', 'nenacr', 'hondubabies',
+    'babylandia', 'mxdulce', 'laosamx', 'lauriosa', 'mantica', 'warebarita',
+    'indiemom'
+];
+
+function shuffle(array) {
+    const arr = array.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function renderFakeOnlineUsers() {
+    const fakeOnlineContainer = document.getElementById('fakeOnlineUsers');
+    const fakeOnlineList = document.getElementById('fakeOnlineUsersList');
+    if (!fakeOnlineContainer || !fakeOnlineList) return;
+    
+    fakeOnlineList.innerHTML = '';
+    const selected = shuffle(fakeUserNames).slice(0, 2);
+    selected.forEach(username => {
+        const badge = document.createElement('span');
+        badge.className = 'fake-online-badge';
+        badge.style.cursor = 'pointer';
+        badge.innerHTML = '<span class="online-dot"></span>@' + username + ' en línea';
+        badge.addEventListener('click', () => onFakeUserClick(username));
+        fakeOnlineList.appendChild(badge);
+    });
+    fakeOnlineContainer.style.display = 'block';
+}
+
+function onFakeUserClick(username) {
+    showConfirm(
+        '¿Quieres hablar con @' + username + '? Si hablas con ella se limpiarán los mensajes de chats antiguos. ¿Deseas continuar?',
+        () => {
+            const container = document.getElementById('chatMessages');
+            if (container) container.innerHTML = '';
+            const partnerEl = document.getElementById('chatPartnerName');
+            if (partnerEl) partnerEl.textContent = '@' + username;
+        },
+        { emoji: '💬', okLabel: 'Sí, hablar' }
+    );
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderFakeOnlineUsers();
+    // Cambiar nombres cada 30 minutos sin recargar el chat
+    setInterval(renderFakeOnlineUsers, 1800000);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+# Certificados SSL (no compartir)
+cert.pem
+key.pem
+
+# Claves VAPID (no compartir)
+vapid_keys.json
+
+# Configuración local
+config.json
+
+# Scripts de inicio con credenciales
+iniciar_app.vbs
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Static media (imágenes, videos, thumbnails - no subir a GitHub)
+static/uploads/
+static/cache/
+static/images/
+static/img/
+static/media/
+static/chat_images/
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.webm
+*.heic
+*.heif
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp
+*.svg
+*.ico

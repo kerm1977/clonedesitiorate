@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% block title %}Panel Admin — 🐻 PhotoBearRate{% endblock %}
+{% block head %}
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-gear-fill text-warning me-2"></i>Panel de Administración
+            </h2>
+            <p class="text-muted small mb-0">Bienvenido, {{ current_user.username or current_user.email }}</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="position-relative">
+                <button class="btn btn-outline-info btn-sm btn-icon-only" onclick="toggleNotifications()" title="Notificaciones">
+                    <i class="bi bi-bell"></i>
+                    <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                        0
+                    </span>
+                </button>
+                <div id="notificationsDropdown" class="dropdown-menu dropdown-menu-end border-secondary" style="display: none; position: absolute; right: 0; top: 100%; min-width: 300px; z-index: 1000;">
+                    <div class="dropdown-header">Notificaciones</div>
+                    <div id="notificationsList" class="max-h-64 overflow-auto">
+                        <div class="dropdown-item text-muted">Cargando...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-tools"></i> Herramientas
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">
+                        <i class="bi bi-gear me-2"></i>Configuración
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin.stories_admin') }}">
+                        <i class="bi bi-book me-2"></i>Historias Usuarios
+                    </a></li>
+                    <li><a class="dropdown-item" href="/admin/weekly-story">
+                        <i class="bi bi-calendar-week me-2"></i>Historia de Semana
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin_image_questions.image_questions') }}">
+                        <i class="bi bi-question-circle me-2"></i>Preguntas Imagen
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin_feedback.five_star_feedback') }}">
+                        <i class="bi bi-star-fill me-2"></i>Feedback 5⭐
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin_feedback.scheduled_messages') }}">
+                        <i class="bi bi-envelope-plus me-2"></i>Mensajes Programados
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin_survey.survey_admin') }}">
+                        <i class="bi bi-clipboard-data me-2"></i>Encuesta
+                    </a></li>
+                </ul>
+            </div>
+            <a href="{{ url_for('game.index') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-eye me-1"></i>Ver sitio
+            </a>
+        </div>
+    </div>
+
+    <!-- URL para compartir -->
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-4">
+        <div style="font-size: 2rem;">🔗</div>
+        <div class="flex-fill">
+            <div class="fw-bold mb-1">URL para compartir (Tailscale):</div>
+            <div class="d-flex gap-2 align-items-center">
+                <code class="flex-fill bg-white p-2 rounded" id="share-url-display">Cargando URL...</code>
+                <button class="btn btn-primary btn-sm" onclick="copyShareUrl()">
+                    <i class="bi bi-clipboard"></i> Copiar
+                </button>
+                <a href="#" id="share-url-link" target="_blank" class="btn btn-outline-primary btn-sm" style="display:none;">
+                    <i class="bi bi-box-arrow-up-right"></i> Abrir
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card text-center">
+                <div class="stat-num text-primary">{{ images_count }}</div>
+                <div class="text-muted small">Imágenes activas</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card text-center">
+                <div class="stat-num text-danger">{{ videos_count }}</div>
+                <div class="text-muted small">Videos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card text-center">
+                <div class="stat-num text-success">{{ total_ratings }}</div>
+                <div class="text-muted small">Total calificaciones</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card text-center">
+                <div class="stat-num text-warning">{{ messages|length }}</div>
+                <div class="text-muted small">Mensajes de serie</div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs admin-tabs mb-4 flex-wrap" id="adminTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#tabMensajes" role="tab">
+                <i class="bi bi-chat-quote me-1"></i>Mensajes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabImagenes" role="tab">
+                <i class="bi bi-images me-1"></i>Imágenes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabConocenos" role="tab">
+                <i class="bi bi-heart me-1"></i>Conózcanos
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabFeedback" role="tab">
+                <i class="bi bi-envelope me-1"></i>Feedback
+                {% if feedbacks %}<span class="badge bg-info ms-1">{{ feedbacks|length }}</span>{% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabConfig" role="tab">
+                <i class="bi bi-sliders me-1"></i>Config
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabConectividad" role="tab">
+                <i class="bi bi-wifi me-1"></i>Conectividad
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabComunidad" role="tab">
+                <i class="bi bi-heart-fill me-1"></i>Mensaje Final
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabUsuarios" role="tab">
+                <i class="bi bi-people-fill me-1"></i>Usuarios
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabVotaciones" role="tab">
+                <i class="bi bi-star-fill me-1"></i>Votaciones
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabFavoritas" role="tab" onclick="loadFavStats()">
+                <i class="bi bi-heart-fill me-1"></i>Favoritas
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabNitaWelcome" role="tab" onclick="loadNitaWelcome()">
+                <i class="bi bi-envelope-heart me-1"></i>Bienvenida Nita
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabBackup" role="tab">
+                <i class="bi bi-floppy me-1"></i>Respaldo
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        {% include 'partials/tab_mensajes.html' %}
+        {% include 'partials/tab_imagenes.html' %}
+        {% include 'partials/tab_conocenos.html' %}
+        {% include 'partials/tab_feedback.html' %}
+        {% include 'partials/tab_config.html' %}
+        {% include 'partials/tab_conectividad.html' %}
+        {% include 'partials/tab_comunidad.html' %}
+        {% include 'partials/tab_usuarios.html' %}
+        {% include 'partials/tab_votaciones.html' %}
+        {% include 'partials/tab_favoritas.html' %}
+        {% include 'partials/tab_nita_welcome.html' %}
+        {% include 'partials/tab_backup.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin.min.js') }}"></script>
+{% if about and about.content %}
+<script>quill.root.innerHTML = {{ about.content | tojson }};</script>
+{% endif %}
+
+<script>
+function loadShareUrl() {
+    fetch('/admin/connect/status')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            var display = document.getElementById('share-url-display');
+            var link = document.getElementById('share-url-link');
+            if (display && d.ts_url) {
+                display.textContent = d.ts_url;
+                if (link) {
+                    link.href = d.ts_url;
+                    link.style.display = 'inline-block';
+                }
+            } else if (display) {
+                display.textContent = d.ts_running ? 'Conectando...' : 'No disponible - Inicia Tailscale Funnel';
+            }
+        }).catch(function(){});
+}
+
+function copyShareUrl() {
+    var display = document.getElementById('share-url-display');
+    if (display && display.textContent && !display.textContent.includes('Cargando') && !display.textContent.includes('No disponible')) {
+        navigator.clipboard.writeText(display.textContent).then(function() {
+            alert('URL copiada al portapapeles');
+        }).catch(function() {
+            alert('No se pudo copiar la URL');
+        });
+    }
+}
+
+// Sistema de notificaciones
+var lastNotificationId = null;
+var notificationPermission = 'default';
+var notificationsDropdownVisible = false;
+
+function requestNotificationPermission() {
+    if ('Notification' in window) {
+        Notification.requestPermission().then(function(permission) {
+            notificationPermission = permission;
+        });
+    }
+}
+
+function showBrowserNotification(message) {
+    if ('Notification' in window && notificationPermission === 'granted') {
+        new Notification('🐻 PhotoBearRate', {
+            body: message,
+            icon: '/static/favicon.ico'
+        });
+    }
+}
+
+function toggleNotifications() {
+    // Solicitar permiso de notificación al hacer clic
+    if (notificationPermission === 'default') {
+        requestNotificationPermission();
+    }
+    
+    var dropdown = document.getElementById('notificationsDropdown');
+    notificationsDropdownVisible = !notificationsDropdownVisible;
+    dropdown.style.display = notificationsDropdownVisible ? 'block' : 'none';
+    if (notificationsDropdownVisible) {
+        loadNotifications();
+    }
+}
+
+function loadNotifications() {
+    fetch('/admin/notifications')
+        .then(function(r){ 
+            if (!r.ok) throw new Error('Error fetching notifications');
+            return r.json(); 
+        })
+        .then(function(notifications){
+            var list = document.getElementById('notificationsList');
+            var badge = document.getElementById('notificationBadge');
+            var unreadCount = notifications.filter(function(n){ return !n.read; }).length;
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+            
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="dropdown-item text-muted">No hay notificaciones</div>';
+            } else {
+                list.innerHTML = notifications.map(function(n){
+                    return '<div class="dropdown-item' + (n.read ? ' opacity-50' : '') + '" style="border-bottom: 1px solid #e0e0e0;">' +
+                           '<small class="text-muted">' + n.created_at + '</small><br>' +
+                           n.message +
+                           '</div>';
+                }).join('');
+            }
+        }).catch(function(e){
+            console.error('Error loading notifications:', e);
+            var list = document.getElementById('notificationsList');
+            if (list) {
+                list.innerHTML = '<div class="dropdown-item text-danger">Error al cargar notificaciones</div>';
+            }
+        });
+}
+
+function checkNotifications() {
+    fetch('/admin/notifications')
+        .then(function(r){ return r.json(); })
+        .then(function(notifications){
+            if (notifications.length > 0) {
+                var latest = notifications[0];
+                if (lastNotificationId !== latest.id && !latest.read) {
+                    showBrowserNotification(latest.message);
+                    lastNotificationId = latest.id;
+                    // Marcar como leída
+                    fetch('/admin/notifications/' + latest.id + '/read', { method: 'POST' });
+                }
+            }
+            // Actualizar badge incluso si dropdown está cerrado
+            if (!notificationsDropdownVisible) {
+                var badge = document.getElementById('notificationBadge');
+                var unreadCount = notifications.filter(function(n){ return !n.read; }).length;
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }).catch(function(){});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadShareUrl();
+    setInterval(loadShareUrl, 10000);
+    
+    // Verificar notificaciones cada 5 segundos
+    setInterval(checkNotifications, 5000);
+    checkNotifications();
+    
+    // El permiso de notificaciones se solicita cuando el usuario hace clic en el botón
+});
+</script>
+{% endblock %}

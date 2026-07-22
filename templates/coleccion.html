@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Colecciones{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="fun-title text-center mb-1">📁 Colecciones</h2>
+    <p class="text-center text-muted mb-4" style="font-size:0.9rem;">Descargue los videos</p>
+
+    {% if files %}
+    <div class="row g-3">
+        {% for f in files %}
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:16px; overflow:hidden;">
+                {% if f.type == 'video' and f.playable %}
+                <div class="w-100 video-lazy" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}" data-mime="{{ f.mime }}"
+                     style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
+                     onclick="loadVideo(this)">
+                    {% if f.thumb %}
+                    <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
+                    {% else %}
+                    <div style="height:180px; background:#f8f0f5; display:flex; align-items:center; justify-content:center;">
+                        <div style="font-size:2.5rem;">🎬</div>
+                    </div>
+                    {% endif %}
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">▶</div>
+                </div>
+                {% elif f.type == 'video' %}
+                <div class="w-100" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
+                     onclick="window.open('{{ url_for('coleccion.serve_file', filename=f.name) }}', '_blank')">
+                    {% if f.thumb %}
+                    <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
+                    {% else %}
+                    <div style="height:180px; background:#f8f0f5; display:flex; align-items:center; justify-content:center;">
+                        <div style="font-size:2.5rem;">🎬</div>
+                    </div>
+                    {% endif %}
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">⬇</div>
+                </div>
+                {% else %}
+                <img src="{{ url_for('coleccion.serve_file', filename=f.name) }}"
+                     class="w-100" style="height:180px; object-fit:cover; cursor:pointer;"
+                     alt="{{ f.name }}" onclick="openImageModal('{{ url_for('coleccion.serve_file', filename=f.name) }}')">
+                {% endif %}
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted text-truncate d-block" style="font-size:0.75rem;" title="{{ f.name }}">{{ f.name }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <p>No se encontraron imágenes ni videos en la colección.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function loadVideo(el) {
+    const src = el.dataset.src;
+    const mime = el.dataset.mime;
+    const video = document.createElement('video');
+    video.className = 'w-100';
+    video.style.cssText = 'height:180px; object-fit:cover;';
+    video.controls = true;
+    video.autoplay = true;
+    video.preload = 'auto';
+    const source = document.createElement('source');
+    source.src = src;
+    source.type = mime;
+    video.appendChild(source);
+    el.replaceWith(video);
+    video.play().catch(() => {});
+}
+
+function openImageModal(src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.maxWidth = '90vw';
+    img.style.maxHeight = '90vh';
+
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.background = 'rgba(0,0,0,0.85)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+    modal.style.cursor = 'zoom-out';
+    modal.appendChild(img);
+    modal.onclick = () => document.body.removeChild(modal);
+    document.body.appendChild(modal);
+}
+</script>
+{% endblock %}

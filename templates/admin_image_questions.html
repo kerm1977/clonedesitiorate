@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% block title %}Preguntas por Imagen — 🐻 PhotoBearRate{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-question-circle-fill text-info me-2"></i>Preguntas por Imagen
+            </h2>
+            <p class="text-muted small mb-0">Configura preguntas específicas para imágenes</p>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Admin
+        </a>
+    </div>
+
+    <!-- Formulario para agregar pregunta -->
+    <div class="admin-card mb-4">
+        <div class="admin-card-header">
+            <i class="bi bi-plus-circle me-2"></i>Agregar Nueva Pregunta
+        </div>
+        <div class="admin-card-body">
+            <form method="POST" action="{{ url_for('admin_image_questions.image_questions') }}" onsubmit="return validateForm()">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Imagen</label>
+                        <input type="text" id="imageSearch" class="form-control border-secondary" placeholder="Buscar por nombre o ID..." oninput="filterImages()" autocomplete="off">
+                        <div id="imageSuggestions" class="bg-light border-secondary mt-1" style="position: absolute; z-index: 1000; max-height: 200px; overflow-y: auto; display: none; border: 1px solid #ccc; border-radius: 4px;"></div>
+                        <input type="hidden" name="image_id" id="selectedImageId" required>
+                        <div id="selectedImageName" class="text-muted small mt-1" style="display: none;"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Trigger (calificaciones)</label>
+                        <input type="number" name="trigger_rating" class="form-control border-secondary" value="200" min="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-lg me-1"></i>Agregar
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Pregunta</label>
+                        <textarea name="question" id="questionInput" class="form-control border-secondary" rows="3" placeholder="Escribe tu pregunta aquí..." required></textarea>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="previewQuestion()">
+                            <i class="bi bi-eye"></i> Vista previa
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de preguntas existentes -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <i class="bi bi-list-check me-2"></i>Preguntas Configuradas
+        </div>
+        <div class="admin-card-body">
+            {% if questions %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Pregunta</th>
+                            <th>Trigger</th>
+                            <th>Respuestas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q, img in questions %}
+                        <tr>
+                            <td>{{ img.filename }}</td>
+                            <td>{{ q.question }}</td>
+                            <td>{{ q.trigger_rating }}</td>
+                            <td>
+                                <button class="btn btn-outline-info btn-sm" onclick="viewResponses({{ q.id }})">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_image_questions.delete_image_question', question_id=q.id) }}"
+                                      onsubmit="return confirm('¿Eliminar esta pregunta y todas sus respuestas?');"
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                No hay preguntas configuradas
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver respuestas -->
+<div class="modal fade" id="responsesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Respuestas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="responsesContent">
+                    <div class="text-center text-muted">Cargando...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para vista previa de pregunta -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content survey-modal">
+            <div class="modal-header survey-modal-header">
+                <h5 class="fun-title mb-0">❓ Vista Previa</h5>
+                <p class="text-white-50 small mb-0 ms-2">Así verá el jugador la pregunta</p>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="survey-q-label" id="previewQuestionText"></p>
+                <textarea class="form-control survey-answer mt-1" rows="4" placeholder="Tu respuesta..." disabled></textarea>
+            </div>
+            <div class="modal-footer border-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var imagesFullData = {{ images_json|tojson }};
+
+function validateForm() {
+    var imageId = document.getElementById('selectedImageId').value;
+    var question = document.getElementById('questionInput').value;
+    
+    if (!imageId) {
+        alert('Por favor selecciona una imagen de las sugerencias');
+        return false;
+    }
+    
+    if (!question.trim()) {
+        alert('Por favor escribe una pregunta');
+        return false;
+    }
+    
+    return true;
+}
+
+function previewQuestion() {
+    var questionText = document.getElementById('questionInput').value;
+    if (!questionText.trim()) {
+        alert('Escribe una pregunta primero');
+        return;
+    }
+    document.getElementById('previewQuestionText').textContent = questionText;
+    var modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+function filterImages() {
+    var searchTerm = document.getElementById('imageSearch').value.toLowerCase();
+    var suggestionsDiv = document.getElementById('imageSuggestions');
+    
+    if (searchTerm.length < 1) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    var filtered = imagesFullData.filter(function(img) {
+        return img.filename.toLowerCase().includes(searchTerm) || 
+               img.id.toString().includes(searchTerm);
+    });
+    
+    if (filtered.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < Math.min(filtered.length, 10); i++) {
+        var img = filtered[i];
+        html += '<div class="suggestion-item p-2 text-white border-bottom border-secondary" style="cursor: pointer;" onclick="selectImage(' + img.id + ', \'' + img.filename.replace(/'/g, "\\'") + '\')">' +
+                '<strong>' + img.id + '</strong> - ' + img.filename +
+                '</div>';
+    }
+    
+    suggestionsDiv.innerHTML = html;
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectImage(id, filename) {
+    document.getElementById('imageSearch').value = id + ' - ' + filename;
+    document.getElementById('selectedImageId').value = id;
+    document.getElementById('selectedImageName').textContent = 'Seleccionado: ' + filename;
+    document.getElementById('selectedImageName').style.display = 'block';
+    document.getElementById('imageSuggestions').style.display = 'none';
+}
+
+// Cerrar sugerencias al hacer clic fuera
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#imageSearch') && !e.target.closest('#imageSuggestions')) {
+        document.getElementById('imageSuggestions').style.display = 'none';
+    }
+});
+
+function viewResponses(questionId) {
+    var modal = new bootstrap.Modal(document.getElementById('responsesModal'));
+    var content = document.getElementById('responsesContent');
+    
+    content.innerHTML = '<div class="text-center text-muted">Cargando...</div>';
+    modal.show();
+    
+    fetch('/admin/image-questions/' + questionId + '/responses')
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (data.responses.length === 0) {
+                content.innerHTML = '<div class="text-center text-muted py-4">No hay respuestas aún</div>';
+            } else {
+                var html = '<div class="mb-3"><strong>Pregunta:</strong> ' + data.question + '</div>' +
+                    '<div class="table-responsive"><table class="table table-dark table-sm">' +
+                    '<thead><tr><th>Usuario</th><th>Respuesta</th><th>Fecha</th></tr></thead>' +
+                    '<tbody>';
+                
+                for (var i = 0; i < data.responses.length; i++) {
+                    var r = data.responses[i];
+                    html += '<tr>' +
+                        '<td><code>' + r.user_session + '</code></td>' +
+                        '<td>' + r.answer + '</td>' +
+                        '<td>' + r.created_at + '</td>' +
+                        '</tr>';
+                }
+                
+                html += '</tbody></table></div>';
+                content.innerHTML = html;
+            }
+        })
+        .catch(function(){
+            content.innerHTML = '<div class="text-center text-danger">Error al cargar respuestas</div>';
+        });
+}
+</script>
+{% endblock %}

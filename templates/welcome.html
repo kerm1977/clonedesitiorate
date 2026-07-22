@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}🐻 PhotoBearRate — ¡Bienvenida!{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <div class="deco" aria-hidden="true">
+        <span class="deco-item" style="top:8%;left:4%;font-size:2rem;animation-delay:0s">✨</span>
+        <span class="deco-item" style="top:15%;right:6%;font-size:1.6rem;animation-delay:.4s">💖</span>
+        <span class="deco-item" style="top:55%;left:2%;font-size:1.4rem;animation-delay:.8s">🌸</span>
+        <span class="deco-item" style="top:70%;right:3%;font-size:1.8rem;animation-delay:1.2s">🌟</span>
+        <span class="deco-item" style="top:35%;left:1%;font-size:1.2rem;animation-delay:.2s">💜</span>
+        <span class="deco-item" style="top:80%;left:7%;font-size:1.5rem;animation-delay:.6s">🦄</span>
+        <span class="deco-item" style="top:25%;right:2%;font-size:2rem;animation-delay:1s">🍭</span>
+        <span class="deco-item" style="top:88%;right:8%;font-size:1.7rem;animation-delay:.9s">🌈</span>
+        <span class="deco-item" style="top:5%;right:15%;font-size:2.2rem;animation-delay:.7s">⭐</span>
+        <span class="deco-item" style="top:92%;left:20%;font-size:2rem;animation-delay:1.6s">👧</span>
+        <span class="deco-item" style="top:18%;left:15%;font-size:2.2rem;animation-delay:2s">👧🏽</span>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+            <div class="welcome-card text-center">
+
+                <div class="welcome-emoji">�</div>
+
+                <h1 class="fun-title display-6 mt-3 mb-2">🐻 ¡Bienvenida a PhotoBearRate!</h1>
+                <p class="fun-subtitle mb-1">Antes de empezar...</p>
+
+                <div class="welcome-question mt-4 mb-3">
+                    <p class="fun-title-sm mb-1">¿Cómo deseas que te llamemos?</p>
+                    <p class="text-muted small">Coloca algo interesante, caliente o tierno<br>según te consideres 😏</p>
+                </div>
+
+                <form action="{{ url_for('game.set_name') }}" method="POST" class="px-2">
+                    <div class="mb-4">
+                        <input type="text"
+                               name="name"
+                               class="form-control welcome-input text-center"
+                               placeholder="Ej: Azúcar, Traviesa, Luna… 🌙"
+                               maxlength="30"
+                               autocomplete="off"
+                               required
+                               autofocus>
+                    </div>
+                    <button type="submit" class="btn btn-fun-pink w-100 py-2 fs-5">
+                        ¡Vamos a calificar! 🚀
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

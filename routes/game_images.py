@@ -1,0 +1,152 @@
+from flask import render_template, send_file, redirect, url_for, jsonify, request
+from flask_login import login_required, current_user
+from models import db, Image
+import os
+import io
+import mimetypes
+from PIL import Image as PILImage
+
+DISK_SEARCH_FOLDER = r'D:\Nueva carpeta'
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif'}
+VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
+
+
+def register_game_images_routes(bp):
+    
+    @bp.route('/image/<int:image_id>')
+    def view_image(image_id):
+        if not current_user.is_authenticated or not current_user.is_superuser:
+            return redirect(url_for('auth.login'))
+        img = Image.query.get_or_404(image_id)
+        return render_template('view_image.html', image=img)
+
+    @bp.route('/img/<int:image_id>')
+    def serve_image(image_id):
+        img = Image.query.get_or_404(image_id)
+        if not os.path.exists(img.filepath):
+            return "Imagen no encontrada", 404
+        
+        # Detectar MIME type correcto para videos
+        mime_type, _ = mimetypes.guess_type(img.filepath)
+        if mime_type:
+            return send_file(img.filepath, mimetype=mime_type)
+        return send_file(img.filepath)
+
+    @bp.route('/img/<int:image_id>/thumb')
+    def serve_thumbnail(image_id):
+        img = Image.query.get_or_404(image_id)
+        if img.is_video or not os.path.exists(img.filepath):
+            return "No disponible", 404
+        
+        try:
+            thumb_size = (240, 240)
+            pil_img = PILImage.open(img.filepath)
+            pil_img = pil_img.convert('RGB')
+            pil_img.thumbnail(thumb_size, PILImage.LANCZOS)
+            
+            buf = io.BytesIO()
+            pil_img.save(buf, format='WEBP', quality=35, optimize=True, method=0)
+            buf.seek(0)
+            
+            response = send_file(buf, mimetype='image/webp')
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
+        except Exception:
+            return send_file(img.filepath)
+
+    @bp.route('/img/<int:image_id>/download')
+    @login_required
+    def download_image(image_id):
+        img = Image.query.get_or_404(image_id)
+        if not os.path.exists(img.filepath):
+            return "Imagen no encontrada", 404
+        return send_file(img.filepath, as_attachment=True, download_name=img.filename)
+
+    @bp.route('/search-folder')
+    @login_required
+    def search_folder():
+        query = request.args.get('q', '').strip().lower()
+        ftype = request.args.get('type', 'all')
+        if not query or not os.path.isdir(DISK_SEARCH_FOLDER):
+            return jsonify([])
+
+        allowed_exts = set()
+        if ftype == 'image':
+            allowed_exts = IMAGE_EXTS
+        elif ftype == 'video':
+            allowed_exts = VIDEO_EXTS
+        else:
+            allowed_exts = IMAGE_EXTS | VIDEO_EXTS
+
+        results = []
+        seen = set()
+        for root, dirs, files in os.walk(DISK_SEARCH_FOLDER):
+            for fname in files:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext not in allowed_exts:
+                    continue
+                if query not in fname.lower():
+                    continue
+                filepath = os.path.join(root, fname)
+                if filepath in seen:
+                    continue
+                seen.add(filepath)
+
+                # Buscar o registrar en BD
+                img = Image.query.filter_by(filepath=filepath).first()
+                if not img:
+                    folder_name = os.path.relpath(root, DISK_SEARCH_FOLDER)
+                    if folder_name == '.':
+                        folder_name = os.path.basename(DISK_SEARCH_FOLDER)
+                    img = Image(filename=fname, filepath=filepath, folder=folder_name, active=True)
+                    db.session.add(img)
+                    db.session.commit()
+
+                mime, _ = mimetypes.guess_type(filepath)
+                is_vid = bool(mime and mime.startswith('video/'))
+                results.append({
+                    'id': img.id,
+                    'filename': img.filename,
+                    'folder': img.folder or '',
+                    'is_video': is_vid,
+                    'from_disk': True
+                })
+                if len(results) >= 20:
+                    break
+            if len(results) >= 20:
+                break
+
+        return jsonify(results)
+
+    @bp.route('/search')
+    @login_required
+    def search_images():
+        query = request.args.get('q', '').strip()
+        ftype = request.args.get('type', 'all')
+        if not query:
+            return jsonify([])
+
+        base_q = Image.query.filter(
+            db.or_(
+                Image.filename.ilike(f'%{query}%'),
+                Image.folder.ilike(f'%{query}%')
+            )
+        ).filter_by(active=True)
+
+        images = base_q.limit(40).all()
+
+        def _mime_is_video(img):
+            mime, _ = mimetypes.guess_type(img.filepath or img.filename)
+            return bool(mime and mime.startswith('video/'))
+
+        if ftype == 'image':
+            images = [i for i in images if not _mime_is_video(i)]
+        elif ftype == 'video':
+            images = [i for i in images if _mime_is_video(i)]
+
+        return jsonify([{
+            'id': img.id,
+            'filename': img.filename,
+            'folder': img.folder or '',
+            'is_video': _mime_is_video(img)
+        } for img in images[:20]])

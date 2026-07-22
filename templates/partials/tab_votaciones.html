@@ -1,0 +1,99 @@
+<div class="tab-pane fade" id="tabVotaciones" role="tabpanel">
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <i class="bi bi-star-fill me-2"></i>Votaciones por Imagen
+        </div>
+        <div class="admin-card-body">
+            <div class="table-responsive">
+                <table class="table table-dark table-sm">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Votos</th>
+                            <th>Promedio</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rating in image_ratings %}
+                        <tr>
+                            <td>{{ rating.filename }}</td>
+                            <td>{{ rating.rating_count }}</td>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ "%.1f"|format(rating.avg_rating) }} ⭐
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('game.view_image', image_id=rating.id) }}"
+                                   class="btn btn-outline-primary btn-sm image-preview-btn"
+                                   data-image-url="{{ url_for('game.serve_image', image_id=rating.id) }}"
+                                   target="_blank">
+                                    <i class="bi bi-eye"></i> Ver Imagen
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No hay votaciones registradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tooltip flotante para previsualización -->
+<div id="imageTooltip" class="image-tooltip" style="display: none; position: fixed; z-index: 9999; background: #1a1a1a; border: 1px solid #444; border-radius: 8px; padding: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+    <img id="tooltipImage" src="" alt="Vista previa" style="max-width: 200px; max-height: 200px; object-fit: contain; display: block;">
+</div>
+
+<style>
+.image-tooltip {
+    pointer-events: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltip = document.getElementById('imageTooltip');
+    var tooltipImage = document.getElementById('tooltipImage');
+    var tooltipTimeout;
+    var imageCache = {};
+
+    document.querySelectorAll('.image-preview-btn').forEach(function(btn) {
+        btn.addEventListener('mouseenter', function(e) {
+            var imageUrl = this.getAttribute('data-image-url');
+            
+            // Pre-cargar imagen si no está en caché
+            if (!imageCache[imageUrl]) {
+                imageCache[imageUrl] = new Image();
+                imageCache[imageUrl].src = imageUrl;
+            }
+            
+            tooltipImage.src = imageUrl;
+            
+            tooltipTimeout = setTimeout(function() {
+                var rect = btn.getBoundingClientRect();
+                tooltip.style.left = (rect.right + 10) + 'px';
+                tooltip.style.top = rect.top + 'px';
+                tooltip.style.display = 'block';
+            }, 200);
+        });
+
+        btn.addEventListener('mouseleave', function() {
+            clearTimeout(tooltipTimeout);
+            tooltip.style.display = 'none';
+        });
+
+        btn.addEventListener('mousemove', function(e) {
+            if (tooltip.style.display === 'block') {
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+            }
+        });
+    });
+});
+</script>

@@ -1,0 +1,101 @@
+<!-- ── LIGHTBOX ── -->
+<div class="modal fade" id="lightboxModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content lightbox-modal">
+            <div class="modal-header lightbox-header px-3 py-2">
+                <span class="text-white small text-truncate me-3" id="lightboxFilename" style="max-width:60%"></span>
+                <div class="d-flex gap-2 ms-auto align-items-center">
+                    <a id="lightboxDownload" href="#" class="btn btn-fun-pink btn-sm">⬇️ Descargar</a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-1 text-center bg-black">
+                <img id="lightboxImg" src="" alt="" class="lightbox-img">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── NOMBRE ── -->
+<div class="modal fade" id="nameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content name-modal">
+            <button type="button" class="btn-close name-modal-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <div class="modal-body text-center py-3 px-4 px-md-5">
+                <div class="name-modal-emoji">🐻</div>
+                <h2 class="fun-title mt-2 mb-1" style="font-size:1.3rem;">🐻 ¡Bienvenida a PhotoBearRate!</h2>
+                <p class="fun-subtitle mb-3" style="font-size:0.85rem;">Antes de empezar, una pregunta importante...</p>
+                <div class="name-modal-question mb-4">
+                    <p class="fun-title-sm mb-1" style="font-size:1.25rem;">¿Cómo deseas que te llamemos?</p>
+                    <p class="text-muted">Coloca algo interesante, caliente o tierno<br>según te consideres 😏</p>
+                </div>
+                <form action="{{ url_for('game.set_name') }}" method="POST">
+                    <div class="mb-4">
+                        <input type="text" name="name" id="nameInput"
+                               class="form-control welcome-input text-center"
+                               placeholder="Ej: Azúcar, Traviesa, Luna… 🌙"
+                               maxlength="30" autocomplete="off" required>
+                    </div>
+                    <button type="submit" class="btn btn-fun-pink px-5 py-3 fs-5 w-100">¡Vamos a calificar! 🚀</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SERIE COMPLETADA ── -->
+<div class="modal fade" id="seriesModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content series-modal">
+            <div class="modal-body text-center py-5 px-4">
+                <div class="series-emoji">🎉</div>
+                <h4 class="fun-title mt-3 mb-2" id="seriesMessage">¡Mensaje aquí!</h4>
+                <p class="fun-subtitle-sm mb-4">Has calificado <strong id="seriesCount">10</strong> imágenes 📸</p>
+                <button class="btn btn-fun-pink px-5 py-2" data-bs-dismiss="modal" id="continueBtn">Continuar 🚀</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── MENSAJE PROGRAMADO ── -->
+<div class="modal fade" id="scheduledMessageModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content survey-modal">
+            <div class="modal-header survey-modal-header">
+                <h5 class="fun-title mb-0">💌 Mensaje para ti</h5>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="survey-q-label" id="scheduledMessageText"></p>
+                <div class="mt-3">
+                    <label class="survey-q-label">Tu respuesta:</label>
+                    <textarea id="scheduledMessageResponse" class="form-control survey-answer mt-1" rows="3" placeholder="Escribe tu respuesta aquí..."></textarea>
+                </div>
+                <input type="hidden" id="scheduledMessageId" value="">
+            </div>
+            <div class="modal-footer border-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="scheduledMessageSkip">Omitir</button>
+                <button type="button" class="btn btn-fun-pink px-4" id="scheduledMessageSubmit">Responder 💕</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ELIMINAR IMAGEN ── -->
+<div class="modal fade" id="deleteImageModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content survey-modal">
+            <div class="modal-header survey-modal-header">
+                <h5 class="fun-title mb-0">🗑️ Eliminar Imagen</h5>
+            </div>
+            <div class="modal-body px-4 py-3 text-center">
+                <p class="survey-q-label">Eres Colaboradora, Deseas Eliminar Permanentemente la imagen?</p>
+                <input type="hidden" id="deleteImageId" value="">
+            </div>
+            <div class="modal-footer border-0 justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="deleteImageCancel">Cancelar</button>
+                <button type="button" class="btn btn-danger px-4" id="deleteImageConfirm">Eliminar Permanentemente</button>
+            </div>
+        </div>
+    </div>
+</div>
+

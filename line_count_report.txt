@@ -1,0 +1,27 @@
+﻿
+Path                                                                                       Type  Lines
+----                                                                                       ----  -----
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\base.html                      .html  1865
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\game_chat.py                      .py     802
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\static\js\app.js                         .js     766
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\static\css\layout.css                    .css    593
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\game_stories.py                   .py     403
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\admin.py                          .py     380
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\weekly_story.html              .html   378
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\admin_connect.py                  .py     324
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\admin.html                     .html   320
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\game_rating.py                    .py     281
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\index.html                     .html   255
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\admin_image_questions.html     .html   246
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\routes\admin_stories.py                  .py     244
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\admin_weekly_story.html        .html   241
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\static\css\modals.css                    .css    238
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\partials\tab_nita_welcome.html .html   236
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\models.py                                .py     224
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\partials\tab_imagenes.html     .html   219
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\chat_socket.py                           .py     216
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\static\css\game-card.css                 .css    211
+C:\Users\MINIOS\CascadeProjects\photo-rating-game\templates\admin_stories.html             .html   209
+
+
+

@@ -1,0 +1,128 @@
+<div class="tab-pane fade" id="tabUsuarios" role="tabpanel">
+    <div class="row g-4">
+        <!-- Formulario para agregar usuario -->
+        <div class="col-md-4">
+            <div class="admin-card h-100">
+                <div class="admin-card-header">
+                    <i class="bi bi-person-plus-fill me-2"></i>Agregar Usuario
+                </div>
+                <div class="admin-card-body">
+                    <form action="{{ url_for('admin_users.add_user') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control form-control-dark form-control-sm"
+                                   placeholder="usuario@email.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Nombre de usuario (opcional)</label>
+                            <input type="text" name="username" class="form-control form-control-dark form-control-sm"
+                                   placeholder="Nombre">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Contraseña</label>
+                            <input type="password" name="password" class="form-control form-control-dark form-control-sm"
+                                   placeholder="Mínimo 6 caracteres" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-circle me-1"></i>Crear Usuario
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- IPs Bloqueadas -->
+        {% set blocked_ips = blocked_ips if blocked_ips is defined else [] %}
+        {% if blocked_ips %}
+        <div class="col-12">
+            <div class="admin-card border-danger">
+                <div class="admin-card-header bg-danger">
+                    <i class="bi bi-shield-lock-fill me-2"></i>IPs Bloqueadas ({{ blocked_ips|length }})
+                </div>
+                <div class="admin-card-body">
+                    <table class="table table-dark table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>IP</th>
+                                <th>Intentos fallidos</th>
+                                <th>Último intento</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ip in blocked_ips %}
+                            <tr>
+                                <td><code>{{ ip.ip_address }}</code></td>
+                                <td>{{ ip.failed_count }}</td>
+                                <td>{{ ip.last_attempt.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <form action="{{ url_for('admin_users.unblock_ip', attempt_id=ip.id) }}" method="POST">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bi bi-unlock-fill me-1"></i>Desbloquear
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Lista de usuarios -->
+        <div class="col-md-8">
+            <div class="admin-card h-100">
+                <div class="admin-card-header">
+                    <i class="bi bi-people-fill me-2"></i>Usuarios Registrados
+                </div>
+                <div class="admin-card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Usuario</th>
+                                    <th>Tipo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.username or '-' }}</td>
+                                    <td>
+                                        {% if user.is_superuser %}
+                                            <span class="badge bg-warning text-dark">Superusuario</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Regular</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not user.is_superuser %}
+                                        <form action="{{ url_for('admin_users.delete_user', user_id=user.id) }}" method="POST"
+                                              onsubmit="return confirm('¿Eliminar usuario {{ user.email }}?')">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <span class="text-muted small">Protegido</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No hay usuarios registrados</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,141 @@
+// Push Notifications para PWA
+let vapidPublicKey = '';
+
+// Cargar clave pública VAPID
+async function loadVapidPublicKey() {
+    try {
+        const response = await fetch('/push/vapid-public-key');
+        const data = await response.json();
+        if (data.publicKey) {
+            vapidPublicKey = data.publicKey;
+            console.log('Clave VAPID cargada');
+        }
+    } catch (error) {
+        console.error('Error cargando clave VAPID:', error);
+    }
+}
+
+// Convertir base64 URL-safe a Uint8Array
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Solicitar permiso y suscribirse
+async function subscribeToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('Tu navegador no soporta notificaciones push');
+        return false;
+    }
+
+    if (!vapidPublicKey) {
+        await loadVapidPublicKey();
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Solicitar permiso
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            alert('Permiso de notificaciones denegado');
+            return false;
+        }
+
+        // Suscribirse
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+
+        // Enviar suscripción al servidor
+        const response = await fetch('/push/subscribe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(subscription)
+        });
+
+        if (response.ok) {
+            console.log('Suscripción exitosa');
+            alert('¡Notificaciones activadas! 🎉');
+            return true;
+        } else {
+            console.error('Error enviando suscripción');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error en suscripción:', error);
+        alert('Error al activar notificaciones');
+        return false;
+    }
+}
+
+// Cancelar suscripción
+async function unsubscribeFromPush() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        
+        if (subscription) {
+            await subscription.unsubscribe();
+            
+            // Notificar al servidor
+            await fetch('/push/unsubscribe', {
+                method: 'POST'
+            });
+            
+            console.log('Suscripción cancelada');
+            alert('Notificaciones desactivadas');
+        }
+    } catch (error) {
+        console.error('Error cancelando suscripción:', error);
+    }
+}
+
+// Verificar estado de suscripción
+async function checkSubscriptionStatus() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        return subscription !== null;
+    } catch (error) {
+        console.error('Error verificando suscripción:', error);
+        return false;
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadVapidPublicKey();
+    
+    // Agregar botón de notificaciones si existe
+    const pushBtn = document.getElementById('pushNotificationsBtn');
+    if (pushBtn) {
+        const isSubscribed = await checkSubscriptionStatus();
+        pushBtn.textContent = isSubscribed ? '🔔' : '🔕';
+        pushBtn.title = isSubscribed ? 'Notificaciones activadas' : 'Activar notificaciones';
+        
+        pushBtn.addEventListener('click', async function() {
+            const isSubscribed = await checkSubscriptionStatus();
+            if (isSubscribed) {
+                await unsubscribeFromPush();
+                pushBtn.textContent = '🔕';
+                pushBtn.title = 'Activar notificaciones';
+            } else {
+                const success = await subscribeToPush();
+                if (success) {
+                    pushBtn.textContent = '🔔';
+                    pushBtn.title = 'Notificaciones activadas';
+                }
+            }
+        });
+    }
+});

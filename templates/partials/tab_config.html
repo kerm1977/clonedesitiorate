@@ -1,0 +1,96 @@
+<div class="tab-pane fade" id="tabConfig" role="tabpanel">
+    <div class="row g-4">
+        <!-- Cambiar contraseña -->
+        <div class="col-md-4">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <i class="bi bi-key me-2"></i>Cambiar contraseña
+                </div>
+                <div class="admin-card-body">
+                    <form action="{{ url_for('admin_users.change_password') }}" method="POST" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Nueva contraseña</label>
+                            <input type="password" name="new_password"
+                                   class="form-control form-control-dark"
+                                   placeholder="Mínimo 6 caracteres" minlength="6" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="bi bi-lock me-1"></i>Cambiar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cambiar puerto -->
+        <div class="col-md-4">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <i class="bi bi-speedometer2 me-2"></i>Cambiar Puerto
+                </div>
+                <div class="admin-card-body">
+                    <form action="{{ url_for('admin.change_port') }}" method="POST" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Puerto (1-65535)</label>
+                            <input type="number" name="port" class="form-control form-control-dark"
+                                   placeholder="8080" min="1" max="65535" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Puertos comunes
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=8080">8080</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=8000">8000</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=3000">3000</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=5000">5000</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=8888">8888</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('input[name=port]').value=9000">9000</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-fun-pink w-100">
+                                <i class="bi bi-arrow-repeat me-1"></i>Cambiar Puerto
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Reinicia la app después de cambiar el puerto</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enviar notificación push -->
+        <div class="col-md-4">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <i class="bi bi-bell me-2"></i>Enviar Notificación Push
+                </div>
+                <div class="admin-card-body">
+                    <form action="{{ url_for('admin.send_push_notification') }}" method="POST" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Mensaje</label>
+                            <textarea name="message" class="form-control form-control-dark" rows="3"
+                                      placeholder="Escribe el mensaje de notificación..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Sesión (opcional)</label>
+                            <input type="text" name="user_session" class="form-control form-control-dark"
+                                   placeholder="Dejar vacío para enviar a todos">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-fun-pink w-100">
+                                <i class="bi bi-send me-1"></i>Enviar Notificación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

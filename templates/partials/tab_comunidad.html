@@ -1,0 +1,36 @@
+<div class="tab-pane fade" id="tabComunidad" role="tabpanel">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Mensaje de Comunidad (PedoMoms Love)</h5>
+            <p class="text-muted small mb-0">Este mensaje aparece cuando el usuario termina de calificar todas las imágenes</p>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.update_community_message') }}">
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Título del mensaje</label>
+                    <input type="text" name="title" class="form-control" value="{{ community_title or '¡Felicidades!' }}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Subtítulo</label>
+                    <input type="text" name="subtitle" class="form-control" value="{{ community_subtitle or 'Eres parte de nuestra Comunidad.' }}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Mensaje principal</label>
+                    <input type="text" name="message" class="form-control" value="{{ community_message or 'PedoMoms Love' }}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Vista previa</label>
+                    <div class="community-preview p-4 rounded text-center" style="background: linear-gradient(145deg, #fff0fc, #f0eeff); border: 3px solid var(--pink);">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">💜</div>
+                        <h2 class="display-5 mb-3">{{ community_title or '¡Felicidades!' }}</h2>
+                        <p class="fs-4 mb-4">{{ community_subtitle or 'Eres parte de nuestra Comunidad.' }}</p>
+                        <h1 class="display-4" style="color: var(--pink); font-weight: 900; text-shadow: 2px 2px 0 var(--yellow);">{{ community_message or 'PedoMoms Love' }}</h1>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>Guardar cambios
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

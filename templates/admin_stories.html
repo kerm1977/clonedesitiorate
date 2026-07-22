@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block title %}Historias — Panel Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-book-fill text-warning me-2"></i>Historias de Usuarios
+            </h2>
+            <p class="text-muted small mb-0">Todas las historias compartidas por las usuarias</p>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al panel
+        </a>
+    </div>
+
+    {% if stories %}
+    <div class="row g-3">
+        {% for story in stories %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card story-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title fun-title-sm mb-0">{{ story.title }}</h5>
+                        <small class="text-muted">{{ story.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                    </div>
+                    <div class="story-content mb-3">
+                        {{ story.content|safe }}
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <i class="bi bi-person me-1"></i>Sesión: {{ story.user_session[:20] }}...
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Comentarios de Admin</label>
+                        <textarea class="form-control form-control-sm" id="adminComment-{{ story.id }}" rows="2" placeholder="Escribe un comentario para esta historia...">{{ story.admin_comments if story.admin_comments else '' }}</textarea>
+                        <button class="btn btn-sm btn-fun-pink mt-1" onclick="saveAdminComment({{ story.id }})">
+                            <i class="bi bi-save me-1"></i>Guardar Comentario
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Agregar Comentario con Nombre</label>
+                        <input type="text" class="form-control form-control-sm mb-1" id="commentUsername-{{ story.id }}" placeholder="Nombre de usuario">
+                        <textarea class="form-control form-control-sm mb-1" id="commentContent-{{ story.id }}" rows="2" placeholder="Mensaje del comentario"></textarea>
+                        <button class="btn btn-sm btn-fun-pink" onclick="addStoryComment({{ story.id }})">
+                            <i class="bi bi-plus me-1"></i>Agregar Comentario
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Comentarios ({{ story.comments|length }})</label>
+                        <div id="commentsList-{{ story.id }}">
+                            {% for comment in story.comments %}
+                            <div class="comment-item small mb-2 p-2 bg-light rounded">
+                                <strong>{{ comment.username }}</strong>: {{ comment.content|linkify|safe }}
+                                <br><small class="text-muted">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                <div class="mt-1">
+                                    {% if current_user.is_superuser or (comment.user_id and comment.user_id == current_user.id) %}
+                                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="editStoryComment({{ comment.id }})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if current_user.is_superuser %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteStoryComment({{ comment.id }})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('game.download_story', story_id=story.id) }}" class="btn btn-sm btn-outline-success">
+                            📥 Descargar
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteStory({{ story.id }})">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state py-5">
+        <div class="empty-cam">📝</div>
+        <h3 class="fun-title mt-3 mb-2">Aún no hay historias</h3>
+        <p class="fun-subtitle fs-5 mb-3">Las usuarias aún no han compartido sus historias</p>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-fun-pink px-4">
+            Volver al panel
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteStory(storyId) {
+    if (confirm('¿Estás segura de que quieres eliminar esta historia?')) {
+        fetch('/admin/stories/' + storyId + '/delete', {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al eliminar la historia');
+        });
+    }
+}
+
+function saveAdminComment(storyId) {
+    const comment = document.getElementById('adminComment-' + storyId).value.trim();
+    fetch('/admin/stories/' + storyId + '/comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'comment=' + encodeURIComponent(comment)
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            alert('Comentario guardado');
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al guardar comentario');
+    });
+}
+
+function addStoryComment(storyId) {
+    const username = document.getElementById('commentUsername-' + storyId).value.trim();
+    const content = document.getElementById('commentContent-' + storyId).value.trim();
+    
+    if (!username || !content) {
+        alert('El nombre y el mensaje son obligatorios');
+        return;
+    }
+    
+    fetch('/admin/stories/' + storyId + '/add-comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'username=' + encodeURIComponent(username) + '&content=' + encodeURIComponent(content)
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al agregar comentario');
+    });
+}
+
+function editStoryComment(commentId) {
+    const commentElement = document.querySelector(`[onclick="editStoryComment(${commentId})"]`).closest('.comment-item');
+    const currentContent = commentElement.querySelector('strong').nextSibling.textContent.trim();
+    const newContent = prompt('Edita el comentario:', currentContent);
+    
+    if (newContent && newContent !== currentContent) {
+        fetch('/admin/stories/comment/' + commentId + '/edit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'content=' + encodeURIComponent(newContent)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al editar comentario');
+        });
+    }
+}
+
+function deleteStoryComment(commentId) {
+    if (confirm('¿Estás segura de que quieres eliminar este comentario?')) {
+        fetch('/admin/stories/comment/' + commentId + '/delete', {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al eliminar comentario');
+        });
+    }
+}
+</script>
+{% endblock %}

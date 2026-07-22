@@ -1,0 +1,36 @@
+.login-card {
+    background: #fff;
+    border: 4px solid var(--pink);
+    border-radius: 32px;
+    box-shadow: 6px 6px 0 var(--yellow);
+    overflow: hidden;
+}
+
+.login-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 2rem;
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(255,107,157,0.4);
+}
+
+.form-control-dark {
+    background: #fff8fc !important;
+    border: 2.5px solid #FFCCE8 !important;
+    border-radius: 14px !important;
+    color: var(--text) !important;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+}
+.form-control-dark:focus {
+    border-color: var(--pink) !important;
+    box-shadow: 0 0 0 3px rgba(255,107,157,0.2) !important;
+    color: var(--text) !important;
+}
+.form-control-dark::placeholder { color: #CCA8C0 !important; }

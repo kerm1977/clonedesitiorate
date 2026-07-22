@@ -1,0 +1,571 @@
+{% extends 'base.html' %}
+{% block title %}🐻 PhotoBear — Galería{% endblock %}
+{% block head %}
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<style>
+.pinterest-grid {
+    column-count: 2;
+    column-gap: 16px;
+}
+@media (min-width: 768px) {
+    .pinterest-grid {
+        column-count: 3;
+    }
+}
+@media (min-width: 1200px) {
+    .pinterest-grid {
+        column-count: 4;
+    }
+}
+.pinterest-item {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    position: relative;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 300px;
+}
+.pinterest-item.loaded {
+    opacity: 1;
+}
+.pinterest-item img, .pinterest-item video {
+    width: 100%;
+    border-radius: 10px;
+    cursor: pointer;
+    display: block;
+    will-change: auto;
+}
+.heart-btn, .favorite-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 22px;
+    color: white;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    transition: transform 0.2s;
+    z-index: 10;
+    padding: 0;
+}
+.heart-btn:hover, .favorite-btn:hover {
+    transform: scale(1.2);
+}
+.heart-btn.favorited, .favorite-btn.favorited {
+    color: #ff4d8d;
+}
+.pinterest-item .share-chat-btn {
+    position: absolute;
+    top: 8px;
+    right: 48px;
+    background: transparent;
+    border: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    color: white;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    transition: transform 0.2s;
+    z-index: 10;
+    padding: 0;
+}
+.pinterest-item .share-chat-btn:hover {
+    transform: scale(1.2);
+    color: #7dd3fc;
+}
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff6b9d, #845ec2);
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(132, 94, 194, 0.4);
+}
+.back-to-top:hover {
+    transform: translateY(-3px);
+}
+.loading-spinner {
+    text-align: center;
+    padding: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-md-5">
+    {% include 'partials/game_deco.html' %}
+
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h1 class="fun-title display-6">🐻 Galería de Fotos</h1>
+        <p class="fun-subtitle mb-3">Explora todas las imágenes 💖</p>
+    </div>
+
+    <!-- Pinterest Grid -->
+    <div class="pinterest-grid" id="imageGrid">
+        {% for image in images %}
+        <div class="pinterest-item" data-image-id="{{ image.id }}">
+            <button class="heart-btn" onclick="toggleFavorite({{ image.id }}, this)" title="Guardar en favoritos">
+                <i class="bi bi-heart"></i>
+            </button>
+            {% if current_user.is_authenticated and (current_user.username == 'nitalaosita' or current_user.is_superuser) %}
+            <button class="share-chat-btn" onclick="shareImageToChat({{ image.id }}, this)" title="Compartir en chat">
+                <i class="bi bi-share"></i>
+            </button>
+            {% endif %}
+            {% if image.is_video %}
+            <video src="{{ url_for('game.serve_image', image_id=image.id) }}"
+                   alt="{{ image.filename }}"
+                   muted
+                   loop
+                   autoplay
+                   onloadeddata="this.parentElement.classList.add('loaded')"
+                   onclick="openImageModal({{ image.id }})"></video>
+            {% else %}
+            <img src="{{ url_for('game.serve_thumbnail', image_id=image.id) }}"
+                 data-full="{{ url_for('game.serve_image', image_id=image.id) }}"
+                 alt="{{ image.filename }}"
+                 loading="lazy"
+                 decoding="async"
+                 onload="this.parentElement.classList.add('loaded')"
+                 onclick="openImageModal({{ image.id }})">
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center my-4" id="pagination">
+        <nav aria-label="Navegación de imágenes">
+            <ul class="pagination">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="#" onclick="loadPage({{ page - 1 }}); return false;">
+                        <i class="bi bi-chevron-left"></i> Anterior
+                    </a>
+                </li>
+                {% set start_page = [1, page - 2] | max %}
+                {% set end_page = [total_pages, page + 2] | min %}
+                {% if start_page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="loadPage(1); return false;">1</a>
+                </li>
+                {% if start_page > 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                {% endif %}
+                {% for p in range(start_page, end_page + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    {% if p == page %}
+                    <span class="page-link">{{ p }}</span>
+                    {% else %}
+                    <a class="page-link" href="#" onclick="loadPage({{ p }}); return false;">{{ p }}</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+                {% if end_page < total_pages %}
+                {% if end_page < total_pages - 1 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="loadPage({{ total_pages }}); return false;">{{ total_pages }}</a>
+                </li>
+                {% endif %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="#" onclick="loadPage({{ page + 1 }}); return false;">
+                        Siguiente <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+        <div class="spinner-border text-pink" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">
+        ↑
+    </button>
+</div>
+
+{% include 'partials/game_modals.html' %}
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fun-title" id="imageModalTitle">Imagen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0" style="position:relative;">
+                <div id="imageModalContent" style="position:relative;display:inline-block;width:100%;"></div>
+                <div id="imageModalActions" style="position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:20;">
+                    <button id="modalFavBtn" onclick="toggleFavoriteModal()" title="Favorito"
+                        style="background:transparent;border:none;font-size:26px;color:white;text-shadow:0 1px 5px rgba(0,0,0,0.7);cursor:pointer;padding:0;line-height:1;transition:transform 0.2s;">
+                        <i class="bi bi-heart"></i>
+                    </button>
+                    {% if current_user.is_authenticated and (current_user.username == 'nitalaosita' or current_user.is_superuser) %}
+                    <button id="modalShareBtn" onclick="shareImageToChat(window._modalImageId, this)" title="Compartir en chat"
+                        style="background:transparent;border:none;font-size:24px;color:white;text-shadow:0 1px 5px rgba(0,0,0,0.7);cursor:pointer;padding:0;line-height:1;transition:transform 0.2s;">
+                        <i class="bi bi-share"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="p-3">
+                    <a id="imageDownloadBtn" href="#" class="btn btn-fun-pink" download>
+                        <i class="bi bi-download"></i> Descargar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Limpiar el modal cuando se cierre para evitar fondo gris
+document.getElementById('imageModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('imageModalContent').innerHTML = '';
+    document.getElementById('imageModalTitle').textContent = 'Imagen';
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.min.js') }}?v=16"></script>
+<script>
+let currentPage = {{ page }};
+
+function toggleFavorite(imageId, btn) {
+    event.stopPropagation();
+    fetch('/img/' + imageId + '/favorite', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.favorited) {
+                btn.classList.add('favorited');
+                btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+            } else {
+                btn.classList.remove('favorited');
+                btn.innerHTML = '<i class="bi bi-heart"></i>';
+            }
+            // Update nav count
+            const navCount = document.getElementById('navFavCount');
+            if (navCount) navCount.textContent = data.favorites_count;
+        });
+}
+
+function shareImageToChat(imageId, btn) {
+    event.stopPropagation();
+    // Determinar el chat partner según el usuario
+    const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+    const isSuperuser = '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+    
+    if (isNita) {
+        // nitalaosita: abrir chat de moderadoras
+        if (typeof openModeratorChat === 'function') {
+            openModeratorChat();
+        } else {
+            // Fallback: intentar abrir chat directamente
+            window.currentChatType = 'moderator';
+            window.currentChatPartner = 'nitalaosita';
+            if (typeof openChat === 'function') {
+                openChat('nitalaosita');
+            }
+        }
+    } else if (isSuperuser) {
+        // superusuario: abrir chat con nitalaosita en modo moderador
+        window.currentChatType = 'moderator';
+        window.currentChatPartner = 'nitalaosita';
+        if (typeof openChat === 'function') {
+            openChat('nitalaosita');
+        }
+    }
+    
+    // Esperar a que el chat se abra y luego enviar la imagen
+    setTimeout(() => {
+        fetch('/image/' + imageId + '/info')
+            .then(r => r.json())
+            .then(data => {
+                // Crear un FormData con la imagen
+                const formData = new FormData();
+                formData.append('receiver_name', 'nitalaosita');
+                formData.append('chat_type', 'moderator');
+                
+                // Descargar la imagen y convertirla a Blob
+                fetch(data.url)
+                    .then(r => r.blob())
+                    .then(blob => {
+                        const file = new File([blob], data.filename, { type: blob.type });
+                        formData.append('image', file);
+                        
+                        // Enviar la imagen al chat
+                        fetch('/chat/send-image', { method: 'POST', body: formData })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.success) {
+                                    if (typeof loadChatHistory === 'function') {
+                                        loadChatHistory();
+                                    }
+                                } else {
+                                    alert('Error: ' + d.error);
+                                }
+                            })
+                            .catch(() => alert('Error al enviar imagen'));
+                    });
+            });
+    }, 500);
+}
+
+function openImageModal(imageId) {
+    window._modalImageId = imageId;
+    fetch('/image/' + imageId + '/info')
+        .then(r => r.json())
+        .then(data => {
+            window._modalIsFav = data.is_favorited;
+            document.getElementById('imageModalTitle').textContent = data.filename;
+            const content = document.getElementById('imageModalContent');
+            const downloadBtn = document.getElementById('imageDownloadBtn');
+            
+            if (data.is_video) {
+                content.innerHTML = '<video src="' + data.url + '" controls style="max-width:100%;border-radius:12px;width:100%;"></video>';
+            } else {
+                content.innerHTML = '<img src="' + data.url + '" style="max-width:100%;border-radius:12px;width:100%;">';
+            }
+            downloadBtn.href = data.download_url;
+            
+            const favBtn = document.getElementById('modalFavBtn');
+            if (favBtn) {
+                favBtn.querySelector('i').className = data.is_favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
+                favBtn.style.color = data.is_favorited ? '#ff4d8d' : 'white';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        });
+}
+
+function toggleFavoriteModal() {
+    if (!window._modalImageId) return;
+    const favBtn = document.getElementById('modalFavBtn');
+    fetch('/img/' + window._modalImageId + '/favorite', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            window._modalIsFav = data.favorited;
+            if (favBtn) {
+                favBtn.querySelector('i').className = data.favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
+                favBtn.style.color = data.favorited ? '#ff4d8d' : 'white';
+            }
+            // Sincronizar con el botón del grid si existe
+            const gridBtn = document.querySelector('[data-image-id="' + window._modalImageId + '"] .heart-btn');
+            if (gridBtn) {
+                gridBtn.querySelector('i').className = data.favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
+                gridBtn.style.color = data.favorited ? '#ff4d8d' : 'white';
+            }
+        });
+}
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function loadPage(page) {
+    if (page < 1) return;
+    
+    document.getElementById('loadingSpinner').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Update URL without reloading the page
+    const url = new URL(window.location);
+    url.searchParams.set('page', page);
+    window.history.pushState({ page: page }, '', url);
+    
+    fetch('/images?page=' + page)
+        .then(r => r.json())
+        .then(data => {
+            const grid = document.getElementById('imageGrid');
+            grid.innerHTML = '';
+            
+            data.images.forEach(img => {
+                const item = document.createElement('div');
+                item.className = 'pinterest-item';
+                item.dataset.imageId = img.id;
+                
+                const favBtn = document.createElement('button');
+                favBtn.className = 'heart-btn';
+                favBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    toggleFavorite(img.id, this);
+                };
+                favBtn.title = 'Guardar en favoritos';
+                favBtn.innerHTML = '<i class="bi bi-heart"></i>';
+                
+                const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+                const isSuperuser = '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+                let shareBtn = null;
+                if (isNita || isSuperuser) {
+                    shareBtn = document.createElement('button');
+                    shareBtn.className = 'share-chat-btn';
+                    shareBtn.title = 'Compartir en chat';
+                    shareBtn.innerHTML = '<i class="bi bi-share"></i>';
+                    shareBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        shareImageToChat(img.id, this);
+                    };
+                }
+                
+                if (img.is_video) {
+                    const video = document.createElement('video');
+                    video.src = img.url;
+                    video.alt = img.filename;
+                    video.muted = true;
+                    video.loop = true;
+                    video.autoplay = true;
+                    video.onclick = function() { openImageModal(img.id); };
+                    video.onloadeddata = function() { item.classList.add('loaded'); };
+                    item.appendChild(favBtn);
+                    item.appendChild(video);
+                } else {
+                    const imgEl = document.createElement('img');
+                    imgEl.src = img.thumb_url || img.url;
+                    imgEl.dataset.full = img.url;
+                    imgEl.alt = img.filename;
+                    imgEl.loading = 'lazy';
+                    imgEl.decoding = 'async';
+                    imgEl.onclick = function() { openImageModal(img.id); };
+                    imgEl.onload = function() { item.classList.add('loaded'); };
+                    item.appendChild(favBtn);
+                    if (shareBtn) item.appendChild(shareBtn);
+                    item.appendChild(imgEl);
+                }
+                
+                grid.appendChild(item);
+            });
+            
+            // Update pagination
+            const pagination = document.getElementById('pagination');
+            let paginationHtml = `
+                <nav aria-label="Navegación de imágenes">
+                    <ul class="pagination">
+                        <li class="page-item ${!data.has_prev ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadPage(${page - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i> Anterior
+                            </a>
+                        </li>
+            `;
+            
+            const totalPages = data.total_pages;
+            const startPage = Math.max(1, page - 2);
+            const endPage = Math.min(totalPages, page + 2);
+            
+            if (startPage > 1) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="loadPage(1); return false;">1</a>
+                    </li>
+                `;
+                if (startPage > 2) {
+                    paginationHtml += `
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    `;
+                }
+            }
+            
+            for (let p = startPage; p <= endPage; p++) {
+                if (p === page) {
+                    paginationHtml += `
+                        <li class="page-item active">
+                            <span class="page-link">${p}</span>
+                        </li>
+                    `;
+                } else {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="loadPage(${p}); return false;">${p}</a>
+                        </li>
+                    `;
+                }
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    `;
+                }
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="loadPage(${totalPages}); return false;">${totalPages}</a>
+                    </li>
+                `;
+            }
+            
+            paginationHtml += `
+                        <li class="page-item ${!data.has_more ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="loadPage(${page + 1}); return false;">
+                                Siguiente <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            `;
+            
+            pagination.innerHTML = paginationHtml;
+            
+            currentPage = page;
+            document.getElementById('loadingSpinner').style.display = 'none';
+        })
+        .catch(() => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        });
+}
+
+// Show/hide back to top button
+window.addEventListener('scroll', function() {
+    const btn = document.getElementById('backToTop');
+    if (window.scrollY > 300) {
+        btn.style.display = 'block';
+    } else {
+        btn.style.display = 'none';
+    }
+});
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', function(event) {
+    if (event.state && event.state.page) {
+        loadPage(event.state.page);
+    }
+});
+
+// Load page from URL on initial load
+window.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageParam = urlParams.get('page');
+    if (pageParam && parseInt(pageParam) > 1) {
+        loadPage(parseInt(pageParam));
+    }
+});
+</script>
+{% endblock %}

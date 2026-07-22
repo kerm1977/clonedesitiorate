@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% block title %}📖 Historia de la Semana — 🐻 PhotoBearRate{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-md-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="text-center mb-4">
+                <h1 class="fun-title display-5">📖 Historia de la Semana</h1>
+                <p class="fun-subtitle">Una historia especial compartida por nosotras</p>
+            </div>
+
+            {% if story %}
+            <div class="card story-card">
+                <div class="card-body">
+                    <h2 class="card-title fun-title mb-3">{{ story.title }}</h2>
+                    <div class="mb-3">
+                        <span class="badge bg-info text-dark">
+                            <i class="bi bi-person me-1"></i>Por: {{ story.author }}
+                        </span>
+                    </div>
+                    <div class="story-content-full">
+                        {{ story.content|safe }}
+                    </div>
+                    <div class="mt-4 text-muted small">
+                        <i class="bi bi-calendar me-1"></i>Semana del: {{ story.week_start.strftime('%d/%m/%Y') }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Comentarios -->
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">💬 Comentarios ({{ comments|length }})</h5>
+                    {% if current_user.is_superuser %}
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearComments()">
+                        <i class="bi bi-trash"></i> Limpiar todos
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form id="commentForm" class="mb-4">
+                        {% if not current_user.is_authenticated or current_user.is_superuser %}
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="commentUsername" placeholder="Tu nombre" {% if current_user.is_authenticated %}value="{{ current_user.username }}"{% endif %} required>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <textarea class="form-control" id="commentContent" rows="3" placeholder="Escribe tu opinión..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-fun-pink">
+                            <i class="bi bi-send me-1"></i>Enviar Comentario
+                        </button>
+                    </form>
+                    
+                    <div id="commentsList">
+                        {% if comments %}
+                        {% for comment in comments %}
+                        <div class="comment-item mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ comment.username }}</strong>
+                                <small class="text-muted">{{ comment.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <p class="mb-0 mt-1" id="comment-content-{{ comment.id }}">{{ comment.content|linkify|safe }}</p>
+                            <div id="reply-form-{{ comment.id }}" style="display:none;" class="mt-2 ms-3">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="reply-input-{{ comment.id }}" placeholder="Responder a {{ comment.username }}...">
+                                    <button class="btn btn-fun-pink btn-sm" onclick="submitReply({{ comment.id }}, '{{ comment.username }}')">
+                                        <i class="bi bi-send"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleReplyForm({{ comment.id }}, '')">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% if current_user.is_authenticated %}
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                {% if current_user.is_superuser or current_user.username == 'nitalaosita' %}
+                                <button class="btn btn-sm btn-link p-0 like-btn {% if comment.id in user_likes %}liked{% endif %}" id="like-btn-{{ comment.id }}" onclick="toggleLike({{ comment.id }}, 'weekly')">
+                                    <i class="bi {% if comment.id in user_likes %}bi-heart-fill{% else %}bi-heart{% endif %}" id="like-icon-{{ comment.id }}"></i>
+                                    <span id="like-count-{{ comment.id }}">{{ comment.likes_count or 0 }}</span>
+                                </button>
+                                <button class="btn btn-sm btn-link p-0 text-secondary" onclick="toggleReplyForm({{ comment.id }}, '{{ comment.username }}')" title="Responder">
+                                    <i class="bi bi-reply"></i> Responder
+                                </button>
+                                {% endif %}
+                                {% if current_user.is_superuser %}
+                                <button class="btn btn-sm btn-link p-0 text-muted" onclick="editLikes({{ comment.id }}, 'weekly')" title="Editar likes">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                {% endif %}
+                                {% if current_user.is_superuser or (comment.user_id and comment.user_id == current_user.id) %}
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="editComment({{ comment.id }})">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </button>
+                                {% endif %}
+                                {% if current_user.is_superuser %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteComment({{ comment.id }})">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                                {% endif %}
+                                {% if current_user.is_authenticated and current_user.username == 'nitalaosita' and comment.username != 'nitalaosita' %}
+                                <button class="btn btn-sm btn-outline-warning nita-report-btn d-none"
+                                        data-comment-id="{{ comment.id }}"
+                                        data-comment-user="{{ comment.username }}"
+                                        title="Reportar este comentario"
+                                        onclick="nitaReport({{ comment.id }}, '{{ comment.username }}')">
+                                    <i class="bi bi-flag"></i> Reportar
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted mb-0">No hay comentarios aún. ¡Sé el primero en opinar!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state py-5">
+                <div class="empty-cam">📝</div>
+                <h3 class="fun-title mt-3 mb-2">Aún no hay historia de la semana</h3>
+                <p class="fun-subtitle fs-5 mb-3">Vuelve pronto para leer nuestra historia especial</p>
+                <button class="btn btn-fun-pink px-4" onclick="history.back()">
+                    Volver
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.story-content-full {
+    line-height: 1.8;
+    font-size: 1.1rem;
+}
+.story-content-full p {
+    margin-bottom: 1rem;
+}
+.story-content-full ul, .story-content-full ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+.comment-item {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+.like-btn {
+    color: #6c757d;
+    transition: color 0.2s ease;
+}
+.like-btn:hover {
+    color: #ff6b9d;
+}
+.like-btn.liked {
+    color: #ff6b9d;
+}
+.like-btn.liked .bi-heart {
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('commentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const usernameField = document.getElementById('commentUsername');
+    const username = usernameField ? usernameField.value.trim() : '';
+    const content = document.getElementById('commentContent').value.trim();
+    if (!content) return;
+    
+    let body = 'content=' + encodeURIComponent(content);
+    if (username) {
+        body += '&username=' + encodeURIComponent(username);
+    }
+    
+    fetch('/weekly-story/{{ story.id }}/comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al enviar comentario');
+    });
+});
+
+function editComment(commentId) {
+    const currentContent = document.getElementById('comment-content-' + commentId).innerText;
+    const newContent = prompt('Edita tu comentario:', currentContent);
+    
+    if (newContent && newContent !== currentContent) {
+        fetch('/weekly-story/comment/' + commentId + '/edit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'content=' + encodeURIComponent(newContent)
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al editar comentario');
+        });
+    }
+}
+
+function toggleReplyForm(commentId, username) {
+    const form = document.getElementById('reply-form-' + commentId);
+    if (!form) return;
+    const isVisible = form.style.display !== 'none';
+    form.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) {
+        document.getElementById('reply-input-' + commentId).focus();
+    }
+}
+
+function submitReply(commentId, toUsername) {
+    const input = document.getElementById('reply-input-' + commentId);
+    const replyText = input ? input.value.trim() : '';
+    if (!replyText) return;
+
+    const content = '↩ @' + toUsername + ': ' + replyText;
+
+    let body = 'content=' + encodeURIComponent(content);
+
+    {% if current_user.is_superuser %}
+    const usernameField = document.getElementById('commentUsername');
+    const myName = usernameField ? usernameField.value.trim() : '';
+    if (!myName) { alert('Por favor escribe tu nombre en el formulario principal antes de responder.'); return; }
+    body += '&username=' + encodeURIComponent(myName);
+    {% endif %}
+
+    fetch('/weekly-story/{{ story.id }}/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(() => alert('Error al enviar respuesta'));
+}
+
+function deleteComment(commentId) {
+    if (confirm('¿Estás segura de que quieres eliminar este comentario?')) {
+        fetch('/weekly-story/comment/' + commentId + '/delete', {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al eliminar comentario');
+        });
+    }
+}
+
+function toggleLike(commentId, commentType) {
+    fetch('/comment/like', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            comment_id: commentId,
+            comment_type: commentType
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            const btn = document.getElementById('like-btn-' + commentId);
+            const icon = document.getElementById('like-icon-' + commentId);
+            const count = document.getElementById('like-count-' + commentId);
+            
+            if (d.liked) {
+                btn.classList.add('liked');
+                icon.classList.remove('bi-heart');
+                icon.classList.add('bi-heart-fill');
+            } else {
+                btn.classList.remove('liked');
+                icon.classList.remove('bi-heart-fill');
+                icon.classList.add('bi-heart');
+            }
+            count.textContent = d.likes_count;
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al dar like');
+    });
+}
+
+function editLikes(commentId, commentType) {
+    console.log('editLikes llamado con:', commentId, commentType);
+    const currentCount = document.getElementById('like-count-' + commentId).textContent;
+    const newCount = prompt('Nuevo número de likes:', currentCount);
+    
+    if (newCount === null) return; // Cancelado
+    
+    const countNum = parseInt(newCount);
+    if (isNaN(countNum) || countNum < 0) {
+        alert('Por favor ingresa un número válido (0 o mayor)');
+        return;
+    }
+    
+    console.log('Enviando solicitud:', { commentId, commentType, countNum });
+    
+    fetch('/comment/edit-likes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            comment_id: commentId,
+            comment_type: commentType,
+            likes_count: countNum
+        })
+    })
+    .then(r => {
+        console.log('Respuesta recibida:', r);
+        return r.json();
+    })
+    .then(d => {
+        console.log('Datos:', d);
+        if (d.success) {
+            document.getElementById('like-count-' + commentId).textContent = d.likes_count;
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        alert('Error al editar likes: ' + e.message);
+    });
+}
+
+function clearComments() {
+    if (!confirm('¿Estás seguro de que quieres eliminar TODOS los comentarios de esta historia? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    fetch('/weekly-story/{{ story.id }}/clear-comments', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al limpiar comentarios');
+    });
+}
+</script>
+{% endblock %}

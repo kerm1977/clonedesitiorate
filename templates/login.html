@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Iniciar Sesión — 🐻 PhotoBearRate{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-9 col-md-5 col-lg-4">
+            <div class="card login-card">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <div class="login-icon mb-3">
+                            🐻
+                        </div>
+                        <h4 class="fun-title mb-1">¡Bienvenida!</h4>
+                        <p class="fun-subtitle-sm">Inicia sesión para jugar</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('auth.login') }}" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Correo electrónico</label>
+                            <input type="email" name="email"
+                                   class="form-control form-control-dark"
+                                   placeholder="tu@correo.com"
+                                   required autofocus>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold">Contraseña</label>
+                            <div class="input-group">
+                                <input type="password" name="password" id="passwordInput"
+                                       class="form-control form-control-dark"
+                                       placeholder="••••••••"
+                                       required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
+                                    <i class="bi bi-eye" id="eyeIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-fun-pink w-100 py-2">
+                            Entrar 🎮
+                        </button>
+                    </form>
+                    <div class="text-center mt-4">
+                        <p class="text-muted small mb-0">
+                            ¿No tienes cuenta? Contacta al administrador
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    var passwordInput = document.getElementById('passwordInput');
+    var eyeIcon = document.getElementById('eyeIcon');
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.classList.remove('bi-eye');
+        eyeIcon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.classList.remove('bi-eye-slash');
+        eyeIcon.classList.add('bi-eye');
+    }
+}
+</script>
+{% endblock %}

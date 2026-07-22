@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Mis Favoritas — 🐻 PhotoBearRate{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="text-center mb-4">
+        <h1 class="fun-title display-6">❤️ Mis Favoritas</h1>
+        <p class="fun-subtitle">Las fotos que más te gustaron</p>
+    </div>
+
+    {% if favs %}
+    <div class="fav-masonry">
+        {% for fav, img in favs %}
+        <div class="fav-card" id="fav-card-{{ img.id }}">
+            <div class="fav-img-wrap" data-src="{{ url_for('game.serve_image', image_id=img.id) }}"
+                 data-filename="{{ img.filename }}"
+                 data-dl="{{ url_for('game.download_image', image_id=img.id) }}"
+                 data-is-video="{{ 'true' if img.is_video else 'false' }}">
+                {% if img.is_video %}
+                <video src="{{ url_for('game.serve_image', image_id=img.id) }}"
+                       alt="{{ img.filename }}"
+                       class="fav-img"
+                       muted
+                       loop></video>
+                {% else %}
+                <img src="{{ url_for('game.serve_image', image_id=img.id) }}"
+                     alt="{{ img.filename }}"
+                     class="fav-img">
+                {% endif %}
+                <div class="fav-zoom-hint">🔍</div>
+            </div>
+            <div class="fav-footer">
+                <span class="fav-name text-truncate">{{ img.filename }}</span>
+                <button class="fav-remove-btn" data-id="{{ img.id }}" title="Quitar de favoritas">🤍</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div style="font-size:4rem">🤍</div>
+        <p class="fun-subtitle mt-3">Aún no tienes favoritas</p>
+        <a href="{{ url_for('game.index') }}" class="btn btn-fun-pink mt-2">Ir a calificar 📷</a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Lightbox -->
+<div class="modal fade" id="favLightbox" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content lightbox-modal">
+            <div class="modal-header lightbox-header px-3 py-2">
+                <span class="text-white small text-truncate me-3" id="favLbFilename" style="max-width:60%"></span>
+                <div class="d-flex gap-2 ms-auto align-items-center">
+                    <a id="favLbDownload" href="#" class="btn btn-fun-pink btn-sm">⬇️ Descargar</a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-1 text-center bg-black">
+                <div id="favLbContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('.fav-img-wrap').forEach(function (wrap) {
+        wrap.addEventListener('click', function () {
+            const isVideo = wrap.dataset.isVideo === 'true';
+            const content = document.getElementById('favLbContent');
+            
+            if (isVideo) {
+                content.innerHTML = '<video src="' + wrap.dataset.src + '" class="lightbox-img" controls autoplay muted loop></video>';
+            } else {
+                content.innerHTML = '<img src="' + wrap.dataset.src + '" alt="" class="lightbox-img">';
+            }
+            
+            document.getElementById('favLbFilename').textContent = wrap.dataset.filename;
+            document.getElementById('favLbDownload').href  = wrap.dataset.dl;
+            new bootstrap.Modal(document.getElementById('favLightbox')).show();
+        });
+    });
+
+    document.querySelectorAll('.fav-remove-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('¿Estás segura de que quieres eliminar esta imagen de favoritas?')) {
+                return;
+            }
+            var imageId = btn.dataset.id;
+            fetch('/img/' + imageId + '/favorite', { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var card = document.getElementById('fav-card-' + imageId);
+                    if (card) card.remove();
+                    var navCount = document.getElementById('navFavCount');
+                    var navBtn   = document.getElementById('navFavBtn');
+                    if (navCount) navCount.textContent = d.favorites_count;
+                    if (navBtn) navBtn.classList.toggle('d-none', d.favorites_count === 0);
+                    if (!document.querySelector('.fav-card')) location.reload();
+                });
+        });
+    });
+
+});
+</script>
+{% endblock %}

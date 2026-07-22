@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback Calificación 5 - Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Admin
+        </a>
+        <h2 class="fun-title mb-0">🔥 Feedback Calificación 5</h2>
+    </div>
+
+    <!-- Lista de feedbacks -->
+    <div class="admin-card">
+        <div class="admin-card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-star-fill me-2"></i>Respuestas de Calificación 5
+            </div>
+            {% if feedbacks %}
+            <form action="{{ url_for('admin_feedback.delete_all_five_feedback') }}" method="POST" onsubmit="return confirm('¿Eliminar TODOS los feedbacks? Esta acción no se puede deshacer.')">
+                <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash3-fill me-1"></i>Eliminar todos
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="admin-card-body">
+            {% if feedbacks %}
+            <div class="table-responsive">
+                <table class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Imagen</th>
+                            <th>¿Qué piensas?</th>
+                            <th>¿Qué te gusta?</th>
+                            <th>¿Qué harías?</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for feedback, img in feedbacks %}
+                        <tr>
+                            <td>
+                                <div class="position-relative d-inline-block">
+                                    <img src="{{ url_for('game.serve_image', image_id=img.id) }}" 
+                                         alt="{{ img.filename }}" 
+                                         class="img-thumbnail cursor-pointer" 
+                                         style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;"
+                                         onclick="openImageModal('{{ url_for('game.serve_image', image_id=img.id) }}', '{{ img.filename }}')">
+                                    {% if loop.index <= 5 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                        Nuevo
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ feedback.what_you_think or '-' }}</td>
+                            <td>{{ feedback.what_you_like or '-' }}</td>
+                            <td>{{ feedback.what_you_would_do or '-' }}</td>
+                            <td>{{ feedback.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <form action="{{ url_for('admin_feedback.delete_five_feedback', feedback_id=feedback.id) }}" method="POST" onsubmit="return confirm('¿Eliminar este feedback?')">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-star fs-1 d-block mb-2"></i>
+                No hay respuestas de calificación 5 aún
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver imagen -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Imagen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="imageModalImg" src="" alt="" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openImageModal(url, filename) {
+    document.getElementById('imageModalImg').src = url;
+    document.getElementById('imageModalTitle').textContent = filename;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+</script>
+{% endblock %}

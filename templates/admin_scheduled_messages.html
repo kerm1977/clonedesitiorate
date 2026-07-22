@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Mensajes Programados - Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al Admin
+        </a>
+        <h2 class="fun-title mb-0">💌 Mensajes Programados</h2>
+    </div>
+
+    <!-- Formulario para crear mensaje -->
+    <div class="admin-card mb-4">
+        <div class="admin-card-header">
+            <i class="bi bi-envelope-plus me-2"></i>Crear Mensaje Programado
+        </div>
+        <div class="admin-card-body">
+            <form action="{{ url_for('admin_feedback.create_scheduled_message') }}" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Usuario</label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Seleccionar usuario...</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha y hora</label>
+                        <input type="datetime-local" name="scheduled_at" class="form-control" id="scheduledAtInput">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-fun-pink w-100" id="submitBtn">
+                            <i class="bi bi-send me-1"></i>Programar Mensaje
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="sendNowCheck" name="send_now" value="true">
+                            <label class="form-check-label" for="sendNowCheck">
+                                <strong>Enviar ahora (mensaje inmediato)</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Mensaje</label>
+                        <textarea name="message" class="form-control" rows="3" placeholder="Escribe el mensaje aquí..." required></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de mensajes programados -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <i class="bi bi-clock-history me-2"></i>Mensajes Programados
+        </div>
+        <div class="admin-card-body">
+            {% if messages %}
+            <div class="table-responsive">
+                <table class="table admin-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Mensaje</th>
+                            <th>Respuesta</th>
+                            <th>Programado para</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for msg in messages %}
+                        <tr>
+                            <td>
+                                <strong>{{ msg.user.username }}</strong><br>
+                                <small class="text-muted">{{ msg.user.email }}</small>
+                            </td>
+                            <td>{{ msg.message }}</td>
+                            <td>
+                                {% if msg.response %}
+                                <span class="text-success">{{ msg.response }}</span>
+                                <br><small class="text-muted">{{ msg.responded_at.strftime('%Y-%m-%d %H:%M') if msg.responded_at else '' }}</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.scheduled_at %}
+                                {{ msg.scheduled_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                <span class="badge bg-info">Inmediato</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.response %}
+                                <span class="badge bg-success">Respondido</span>
+                                {% elif msg.shown %}
+                                <span class="badge bg-warning text-dark">Visto (sin respuesta)</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('admin_feedback.delete_scheduled_message', message_id=msg.id) }}" method="POST" onsubmit="return confirm('¿Eliminar este mensaje?')">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-envelope fs-1 d-block mb-2"></i>
+                No hay mensajes programados
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sendNowCheck = document.getElementById('sendNowCheck');
+    const scheduledAtInput = document.getElementById('scheduledAtInput');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    sendNowCheck.addEventListener('change', function() {
+        if (this.checked) {
+            scheduledAtInput.disabled = true;
+            scheduledAtInput.required = false;
+            submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar Ahora';
+        } else {
+            scheduledAtInput.disabled = false;
+            scheduledAtInput.required = true;
+            submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>Programar Mensaje';
+        }
+    });
+});
+</script>
+{% endblock %}

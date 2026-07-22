@@ -1,0 +1,397 @@
+<!-- Chat JavaScript Module -->
+<script>
+let socket = null;
+let currentChatPartner = null;
+let currentChatType = 'private';
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+let _superNotifCount = 0;
+let _superNotifSender = '';
+
+function openSuperChat() {
+    _superNotifCount = 0;
+    const btn = document.getElementById('superNotifBtn');
+    if (btn) btn.style.display = 'none';
+    if (_superNotifSender) { openChat(_superNotifSender); }
+}
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_superuser %}
+// Panel de actividad de Nita (scope global)
+let _nitaBadgeCount = 0;
+let _nitaPanelOpen  = false;
+
+function toggleNitaPanel() {
+    _nitaPanelOpen = !_nitaPanelOpen;
+    document.getElementById('nitaActivityPanel').style.display = _nitaPanelOpen ? 'block' : 'none';
+    if (_nitaPanelOpen) {
+        _nitaBadgeCount = 0;
+        const badge = document.getElementById('nitaBadge');
+        if (badge) badge.style.display = 'none';
+    }
+}
+
+async function callNita() {
+    const btn = document.getElementById('callNitaBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '📞 Llamando...';
+    }
+    try {
+        const r = await fetch('/push/call-nita', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+            addNitaActivity({
+                type: 'call',
+                icon: '📲',
+                text: 'Llamada enviada',
+                link: null
+            });
+        }
+    } catch(e) {
+        console.error('Error llamando:', e);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📲 Llamar';
+        }
+    }
+}
+
+function addNitaActivity(data) {
+    playReceiveSound();
+    const list  = document.getElementById('nitaActivityList');
+    const empty = document.getElementById('nitaEmptyState');
+    if (empty) empty.remove();
+
+    const now  = new Date().toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit'});
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start;';
+    item.innerHTML = `
+        <span style="font-size:1.2rem;flex-shrink:0">${data.icon}</span>
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:0.85rem;color:#333;">${data.text}</div>
+            <div style="font-size:0.75rem;color:#aaa;">${now}</div>
+        </div>
+        ${data.link ? `<a href="${data.link}" style="font-size:0.75rem;color:#845ec2;white-space:nowrap;text-decoration:none;">Ver →</a>` : ''}
+    `;
+    list.insertBefore(item, list.firstChild);
+
+    if (!_nitaPanelOpen) {
+        _nitaBadgeCount++;
+        const badge = document.getElementById('nitaBadge');
+        if (badge) { badge.textContent = _nitaBadgeCount > 9 ? '9+' : _nitaBadgeCount; badge.style.display = 'flex'; }
+    }
+
+    document.getElementById('nitaAlertTitle').textContent = '🐻 Nita';
+    document.getElementById('nitaAlertText').textContent  = data.icon + ' ' + data.text;
+    const goBtn = document.getElementById('nitaAlertGoBtn');
+    if (data.link) { goBtn.style.display = ''; goBtn.onclick = () => { window.location.href = data.link; }; }
+    else { goBtn.style.display = 'none'; }
+    const alertInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('nitaAlertModal'));
+    alertInst.show();
+    setTimeout(() => alertInst.hide(), 5000);
+}
+{% endif %}
+
+function initSocket() {
+    if (socket) return;
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+        socket.emit('get_online');
+    });
+
+    socket.on('online_list', data => {
+        onlineUsers = new Set(data.online);
+        refreshOnlinePanel();
+    });
+
+    socket.on('user_online', data => {
+        onlineUsers.add(data.username);
+        refreshOnlinePanel();
+    });
+
+    socket.on('nita_activity', data => {
+        addNitaActivity(data);
+    });
+
+    socket.on('call_nita', () => {
+        playReceiveSound();
+        const alertInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('nitaAlertModal'));
+        document.getElementById('nitaAlertTitle').textContent = '🐻 Nita';
+        document.getElementById('nitaAlertText').textContent = '📲 Llamada entrante';
+        document.getElementById('nitaAlertGoBtn').style.display = 'none';
+        alertInst.show();
+        setTimeout(() => alertInst.hide(), 5000);
+    });
+
+    socket.on('super_message_to_nita', data => {
+        _superNotifCount++;
+        _superNotifSender = data.sender;
+        const btn = document.getElementById('superNotifBtn');
+        if (btn) {
+            btn.textContent = '💬 ' + (_superNotifCount > 9 ? '9+' : _superNotifCount);
+            btn.style.display = 'inline-flex';
+        }
+    });
+
+    socket.on('user_offline', data => {
+        onlineUsers.delete(data.username);
+        refreshOnlinePanel();
+    });
+
+    socket.on('new_message', msg => {
+        const chatModal = document.getElementById('chatModal');
+        const isChatOpen = chatModal && chatModal.classList.contains('show');
+        const isMyPartner = msg.sender_name === currentChatPartner || msg.receiver_name === currentChatPartner;
+        
+        if (isChatOpen && isMyPartner) {
+            appendMessage(msg.display_sender_name || msg.sender_name, msg.content, msg.is_me, msg.created_at, msg.image_path);
+            scrollToBottom();
+        } else {
+            updateUnreadBadge();
+        }
+        socket.emit('message_received', { msg_id: msg.id, sender: msg.sender });
+    });
+
+    socket.on('message_status', data => {
+        const msgEl = document.getElementById('msg-' + data.msg_id);
+        if (msgEl) {
+            const statusEl = msgEl.querySelector('.message-status');
+            if (statusEl) statusEl.textContent = data.status;
+        }
+    });
+
+    socket.on('message_deleted', data => {
+        const msgEl = document.getElementById('msg-' + data.msg_id);
+        if (msgEl) msgEl.remove();
+    });
+
+    socket.on('all_chats_cleared', () => {
+        if (document.getElementById('chatMessages')) {
+            document.getElementById('chatMessages').innerHTML = '';
+        }
+    });
+
+    socket.on('nita_welcome', data => {
+        playReceiveSound();
+        const alertInst = bootstrap.Modal.getOrCreateInstance(document.getElementById('nitaAlertModal'));
+        document.getElementById('nitaAlertTitle').textContent = '🐻 Nita';
+        document.getElementById('nitaAlertText').textContent = data.message;
+        document.getElementById('nitaAlertGoBtn').style.display = 'none';
+        alertInst.show();
+        setTimeout(() => alertInst.hide(), 5000);
+    });
+
+    socket.on('admin_modal', data => {
+        const modal = document.getElementById('adminModal');
+        if (modal) {
+            const modalInst = bootstrap.Modal.getOrCreateInstance(modal);
+            modalInst.show();
+        }
+    });
+
+    socket.on('nita_connected', () => {
+        const status = document.getElementById('nitaStatus');
+        if (status) {
+            status.textContent = '🟢 En línea';
+            status.style.color = '#28a745';
+        }
+    });
+
+    socket.on('nita_disconnected', () => {
+        const status = document.getElementById('nitaStatus');
+        if (status) {
+            status.textContent = '🔴 Desconectado';
+            status.style.color = '#dc3545';
+        }
+    });
+
+    socket.on('chat_cleared', data => {
+        if (document.getElementById('chatMessages')) {
+            document.getElementById('chatMessages').innerHTML = '';
+        }
+    });
+
+    socket.on('like_update', data => {
+        const likeBtn = document.getElementById('likeBtn-' + data.photo_id);
+        if (likeBtn) {
+            likeBtn.textContent = data.liked ? '❤️ ' + data.count : '🤍 ' + data.count;
+        }
+    });
+
+    socket.on('user_typing', data => {
+        const typingEl = document.getElementById('typingIndicator');
+        if (typingEl && data.username === currentChatPartner) {
+            typingEl.style.display = 'block';
+        }
+    });
+
+    socket.on('user_stop_typing', () => {
+        const typingEl = document.getElementById('typingIndicator');
+        if (typingEl) typingEl.style.display = 'none';
+    });
+}
+
+// Chat functions
+function openChat(username) {
+    currentChatPartner = username;
+    document.getElementById('chatPartnerName').textContent = username;
+    document.getElementById('chatMessages').innerHTML = '';
+    const _admBtn = document.getElementById('adminMsgOpenBtn');
+    if (_admBtn) _admBtn.style.display = (username === 'nitalaosita') ? 'inline-flex' : 'none';
+
+    initSocket();
+
+    const isSuperuser = '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+    const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+    if (isSuperuser || isNita) {
+        loadChatHistory();
+    }
+
+    loadMyAlias();
+
+    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
+    modal.show();
+
+    socket.emit('join_chat', { partner: username });
+    socket.emit('get_online');
+
+    fetch('/chat/mark-read/' + encodeURIComponent(username), { method: 'POST' })
+        .then(() => updateUnreadBadge());
+}
+
+function openMaskedChat(displayName, realUsername) {
+    currentChatPartner = realUsername;
+    document.getElementById('chatPartnerName').textContent = displayName;
+    document.getElementById('chatMessages').innerHTML = '';
+    
+    fetch('/chat/set-partner-alias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partner: realUsername, alias: displayName })
+    }).catch(() => {});
+
+    initSocket();
+
+    loadChatHistory();
+
+    loadMyAlias();
+
+    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
+    modal.show();
+
+    socket.emit('join_chat', { partner: realUsername });
+    socket.emit('get_online');
+
+    fetch('/chat/mark-read/' + encodeURIComponent(realUsername), { method: 'POST' })
+        .then(() => updateUnreadBadge());
+    
+    const userSearchInput = document.getElementById('userSearchInput');
+    if (userSearchInput) userSearchInput.value = '';
+    
+    const privateChatModal = document.getElementById('privateChatModal');
+    if (privateChatModal) {
+        const modalInstance = bootstrap.Modal.getInstance(privateChatModal);
+        if (modalInstance) modalInstance.hide();
+    }
+}
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+function openModeratorChat() {
+    currentChatType = 'moderator';
+    currentChatPartner = 'moderadoras';
+    
+    const privateChatTypeBtn = document.getElementById('privateChatTypeBtn');
+    const moderatorChatTypeBtn = document.getElementById('moderatorChatTypeBtn');
+    if (privateChatTypeBtn) privateChatTypeBtn.classList.remove('active');
+    if (moderatorChatTypeBtn) moderatorChatTypeBtn.classList.add('active');
+    
+    openChat('moderadoras');
+}
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.is_superuser %}
+function openSuperModeratorChat() {
+    currentChatType = 'moderator';
+    currentChatPartner = 'nitalaosita';
+    
+    openChat('nitalaosita');
+}
+{% endif %}
+
+function loadChatHistory() {
+    if (!currentChatPartner) return;
+    const chatTypeParam = currentChatType ? `?chat_type=${currentChatType}` : '';
+    fetch('/chat/messages/' + encodeURIComponent(currentChatPartner) + chatTypeParam)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('chatMessages').innerHTML = '';
+            if (data.display_name) {
+                const el = document.getElementById('chatPartnerName');
+                if (el) el.textContent = data.display_name;
+            }
+            const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+            data.messages.forEach(m => {
+                appendMessage(m.display_sender_name || m.sender_name, m.content, m.is_me, m.created_at, m.image_path);
+            });
+        })
+        .catch(() => {});
+}
+
+function linkify(text) {
+    return text.replace(/(https?:\/\/[^\s<>"'\)]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+function updateUnreadBadge() {
+    fetch('/chat/unread-count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('chatUnreadBadge');
+            if (badge) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }).catch(() => {});
+}
+
+{% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+window._nitaAdminModal = null;
+function initNitaAdminModal() {
+    if (!window._nitaAdminModal) window._nitaAdminModal = new bootstrap.Modal(document.getElementById('nitaAdminAlertModal'));
+    return window._nitaAdminModal;
+}
+{% endif %}
+
+let _confirmModal = null;
+let _confirmCallback = null;
+
+function showConfirm(msg, onOk, opts) {
+    opts = opts || {};
+    document.getElementById('confirmModalMsg').textContent = msg;
+    document.getElementById('confirmModalEmoji').textContent = opts.emoji || '⚠️';
+    const okBtn = document.getElementById('confirmModalOk');
+    okBtn.textContent = opts.okLabel || 'Confirmar';
+    if (opts.danger) {
+        okBtn.style.background = 'linear-gradient(135deg,#e74c3c,#c0392b)';
+        document.getElementById('confirmModalContent').style.borderColor = '#e74c3c';
+        document.getElementById('confirmModalHeader').style.background = 'linear-gradient(135deg,#e74c3c,#c0392b)';
+    } else {
+        okBtn.style.background = 'linear-gradient(135deg,#ff6b9d,#845ec2)';
+        document.getElementById('confirmModalContent').style.borderColor = '#ff6b9d';
+        document.getElementById('confirmModalHeader').style.background = 'linear-gradient(135deg,#ff6b9d,#845ec2)';
+    }
+    _confirmCallback = onOk;
+    if (!_confirmModal) _confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    _confirmModal.show();
+    setTimeout(() => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length) backdrops[backdrops.length - 1].style.zIndex = '1075';
+    }, 10);
+}
+</script>

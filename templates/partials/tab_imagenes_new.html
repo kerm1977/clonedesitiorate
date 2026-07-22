@@ -1,0 +1,133 @@
+<div class="tab-pane fade" id="tabImagenes" role="tabpanel">
+
+    <!-- Fuentes activas -->
+    <div class="admin-card mb-4">
+        <div class="admin-card-header d-flex align-items-center gap-2">
+            <i class="bi bi-hdd-stack me-1"></i>Fuentes de medios
+            <span class="badge bg-secondary ms-1">{{ sources|length }}</span>
+            <form action="{{ url_for('admin_media.scan_all') }}" method="POST" class="ms-auto">
+                <button type="submit" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i>Escanear todo
+                </button>
+            </form>
+        </div>
+        <div class="admin-card-body">
+            {% if sources %}
+            <div class="d-flex flex-column gap-2 mb-4">
+                {% for src in sources %}
+                <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-light">
+                    <span class="badge {% if src.source_type == 'upload' %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                        {% if src.source_type == 'upload' %}⬆️ Upload{% else %}📁 Carpeta{% endif %}
+                    </span>
+                    <span class="fw-semibold small flex-grow-1">{{ src.name }}</span>
+                    <span class="text-muted" style="font-size:0.7rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ src.path }}">{{ src.path }}</span>
+                    <span class="badge {% if src.active %}bg-success{% else %}bg-secondary{% endif %}">{{ 'Activa' if src.active else 'Inactiva' }}</span>
+                    {% if src.source_type == 'folder' %}
+                    <form action="{{ url_for('admin_media.scan_source', sid=src.id) }}" method="POST">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm py-0">↺</button>
+                    </form>
+                    {% endif %}
+                    <form action="{{ url_for('admin_media.del_source', sid=src.id) }}" method="POST"
+                          onsubmit="return confirm('¿Eliminar esta fuente?')">
+                        <button type="submit" class="btn btn-outline-danger btn-sm py-0">🗑</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Agregar fuente -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.05);">
+                        <p class="text-muted small mb-2 fw-semibold">📁 Agregar carpeta del sistema</p>
+                        <form action="{{ url_for('admin_media.add_source') }}" method="POST">
+                            <input type="hidden" name="source_type" value="folder">
+                            <input type="text" name="name" class="form-control form-control-dark form-control-sm mb-2"
+                                   placeholder="Nombre (ej: Fotos Playa)" required>
+                            <input type="text" name="path" class="form-control form-control-dark form-control-sm mb-2"
+                                   placeholder="Ruta completa (ej: C:\Fotos\Playa)" required>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-folder-plus me-1"></i>Agregar y escanear
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:rgba(255,255,255,0.05);">
+                        <p class="text-muted small mb-2 fw-semibold">⬆️ Crear fuente de subida directa</p>
+                        <form action="{{ url_for('admin_media.add_source') }}" method="POST">
+                            <input type="hidden" name="source_type" value="upload">
+                            <input type="text" name="name" class="form-control form-control-dark form-control-sm mb-2"
+                                   placeholder="Nombre (ej: Subidas Web)" required>
+                            <button type="submit" class="btn btn-warning btn-sm w-100 text-dark">
+                                <i class="bi bi-cloud-upload me-1"></i>Crear fuente de subida
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subir imágenes (solo si hay fuentes upload) -->
+    {% if upload_sources %}
+    <div class="admin-card mb-4">
+        <div class="admin-card-header"><i class="bi bi-cloud-upload me-2"></i>Subir imágenes</div>
+        <div class="admin-card-body">
+            <form action="{{ url_for('admin_media.upload_images') }}" method="POST" enctype="multipart/form-data"
+                  class="row g-2">
+                <div class="col-12 col-md-4">
+                    <select name="source_id" class="form-select form-select-sm form-control-dark">
+                        {% for src in upload_sources %}
+                        <option value="{{ src.id }}">{{ src.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-6">
+                    <input type="file" name="images" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.mp4,.webm,.mov,.avi,.mkv"
+                           class="form-control form-control-sm" required>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-warning btn-sm text-dark">
+                        <i class="bi bi-upload me-1"></i>Subir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Imágenes registradas -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <i class="bi bi-grid me-2"></i>Imágenes registradas
+            <span class="badge bg-secondary ms-2">{{ images_count }}</span>
+            <span class="badge bg-danger ms-1">{{ videos_count }} videos</span>
+        </div>
+        <div class="admin-card-body p-0" style="max-height:420px;overflow-y:auto;">
+            {% if images %}
+            <table class="table table-dark table-hover table-sm mb-0 admin-table">
+                <thead class="table-sticky-head">
+                    <tr><th>Archivo</th><th style="width:80px">Fuente</th><th style="width:100px">Estado</th><th style="width:110px">Acción</th></tr>
+                </thead>
+                <tbody>
+                {% for img in images %}
+                <tr>
+                    <td class="text-truncate" style="max-width:280px;" title="{{ img.filepath }}">{{ img.filename }}</td>
+                    <td class="text-muted" style="font-size:0.7rem;">{{ img.folder.split('\\')[-1] if img.folder else '—' }}</td>
+                    <td><span class="badge {{ 'bg-success' if img.active else 'bg-secondary' }} status-badge" id="badge-{{ img.id }}">{{ 'Activa' if img.active else 'Inactiva' }}</span></td>
+                    <td><button class="btn btn-sm btn-outline-warning toggle-img-btn" id="btn-{{ img.id }}" onclick="toggleImage({{ img.id }})">{{ 'Desactivar' if img.active else 'Activar' }}</button></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-images display-6 d-block mb-2"></i>
+                Agrega una fuente de medios arriba para comenzar.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

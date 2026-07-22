@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% block title %}Historia de la Semana — Panel Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-book-fill text-warning me-2"></i>Historia de la Semana
+            </h2>
+            <p class="text-muted small mb-0">Escribe la historia especial de la semana</p>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al panel
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Editar Historia de la Semana</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/weekly-story/save">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Semana (inicio)</label>
+                            <input type="date" class="form-control" name="week_start" 
+                                   value="{{ week_start.strftime('%Y-%m-%d') if week_start else '' }}" required>
+                            <small class="text-muted">El inicio de la semana (lunes)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Título</label>
+                            <input type="text" class="form-control" name="title" 
+                                   value="{{ current_story.title if current_story else '' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Autora</label>
+                            <input type="text" class="form-control" name="author" 
+                                   value="{{ current_story.author if current_story else '' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Contenido</label>
+                            <div class="editor-toolbar mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('bold')" title="Negrita">
+                                    <b>B</b>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('italic')" title="Cursiva">
+                                    <i>I</i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('justifyLeft')" title="Izquierda">
+                                    <i class="bi bi-text-left"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('justifyCenter')" title="Centro">
+                                    <i class="bi bi-text-center"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('justifyRight')" title="Derecha">
+                                    <i class="bi bi-text-right"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('insertUnorderedList')" title="Viñetas">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatDoc('insertOrderedList')" title="Lista ordenada">
+                                    <i class="bi bi-list-ol"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertLink()" title="Insertar enlace">
+                                    <i class="bi bi-link-45deg"></i>
+                                </button>
+                            </div>
+                            <div id="weeklyStoryEditor" contenteditable="true" class="form-control editor-content" style="min-height: 300px; overflow-y: auto;">{{ current_story.content|safe if current_story else '' }}</div>
+                            <input type="hidden" name="content" id="weeklyStoryContent">
+                        </div>
+                        <button type="submit" class="btn btn-fun-pink">
+                            <i class="bi bi-save me-1"></i>Guardar Historia
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Historias Anteriores</h5>
+                </div>
+                <div class="card-body">
+                    {% if all_stories %}
+                    <div class="list-group list-group-flush">
+                        {% for story in all_stories %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="activeStory" value="{{ story.id }}"
+                                       {% if story.active %}checked{% endif %}
+                                       onchange="activateStory({{ story.id }})"
+                                       class="me-3">
+                                <div>
+                                    <strong>{{ story.title }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ story.week_start.strftime('%d/%m/%Y') }}</small>
+                                    <br>
+                                    <small class="text-muted">Por: {{ story.author }}</small>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editWeeklyStory({{ story.id }})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteWeeklyStory({{ story.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay historias anteriores</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.editor-toolbar {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.editor-content {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    min-height: 300px;
+}
+.editor-content:focus {
+    outline: 2px solid #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function formatDoc(cmd, value = null) {
+    document.execCommand(cmd, false, value);
+    document.getElementById('weeklyStoryEditor').focus();
+}
+
+function insertLink() {
+    console.log('insertLink called');
+    const editor = document.getElementById('weeklyStoryEditor');
+    const url = prompt('Ingresa la URL del enlace:');
+    console.log('URL entered:', url);
+    
+    if (url && editor) {
+        editor.focus();
+        
+        // Verificar si hay texto seleccionado
+        const selection = window.getSelection();
+        const selectedText = selection.toString();
+        
+        if (selectedText) {
+            // Si hay texto seleccionado, crear enlace con ese texto
+            const result = document.execCommand('createLink', false, url);
+            console.log('createLink result with selection:', result);
+        } else {
+            // Si no hay texto seleccionado, insertar enlace con la URL como texto
+            const linkHtml = `<a href="${url}" target="_blank">${url}</a>&nbsp;`;
+            document.execCommand('insertHTML', false, linkHtml);
+            console.log('insertHTML executed');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Guardar contenido en el hidden input antes de enviar
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const editor = document.getElementById('weeklyStoryEditor');
+            const hiddenInput = document.getElementById('weeklyStoryContent');
+            if (editor && hiddenInput) {
+                hiddenInput.value = editor.innerHTML;
+                console.log('Contenido guardado:', editor.innerHTML);
+            }
+        });
+    }
+});
+
+function deleteWeeklyStory(storyId) {
+    if (confirm('¿Estás segura de que quieres eliminar esta historia de la semana?')) {
+        fetch('/admin/weekly-story/' + storyId + '/delete', {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + d.error);
+            }
+        })
+        .catch(e => {
+            alert('Error al eliminar la historia');
+        });
+    }
+}
+
+function activateStory(storyId) {
+    fetch('/admin/weekly-story/' + storyId + '/activate', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al activar la historia');
+    });
+}
+
+function editWeeklyStory(storyId) {
+    fetch('/admin/weekly-story/' + storyId + '/get')
+    .then(r => r.json())
+    .then(d => {
+        if (d.story) {
+            // Llenar el formulario con los datos de la historia
+            document.querySelector('input[name="week_start"]').value = d.story.week_start;
+            document.querySelector('input[name="title"]').value = d.story.title;
+            document.querySelector('input[name="author"]').value = d.story.author;
+            document.getElementById('weeklyStoryEditor').innerHTML = d.story.content;
+            
+            // Scroll al formulario
+            document.querySelector('form').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error: ' + d.error);
+        }
+    })
+    .catch(e => {
+        alert('Error al cargar la historia');
+    });
+}
+</script>
+{% endblock %}

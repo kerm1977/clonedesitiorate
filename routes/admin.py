@@ -1,0 +1,546 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
+from flask_login import login_required, current_user
+from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite
+from datetime import datetime, timedelta
+import json
+import os
+import io
+import zipfile
+from functools import wraps
+
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+_admin_socketio = None
+_chat_socketio = None
+
+def set_admin_socketio(sio):
+    global _admin_socketio
+    _admin_socketio = sio
+
+def set_chat_socketio(sio):
+    global _chat_socketio
+    _chat_socketio = sio
+
+# Import and register admin stories routes
+from routes.admin_stories import register_admin_stories_routes
+register_admin_stories_routes(admin_bp)
+
+# Rate limiting configuración
+ADMIN_RATE_LIMIT = 30  # peticiones por minuto
+ADMIN_RATE_WINDOW = 60  # segundos
+
+
+def _get_ip():
+    return request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+
+
+def rate_limit_admin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        ip = _get_ip()
+        now = datetime.utcnow()
+        
+        # Buscar o crear registro de rate limit para esta IP
+        rate_record = RateLimit.query.filter_by(ip_address=ip).first()
+        
+        if not rate_record:
+            rate_record = RateLimit(ip_address=ip, request_count=1, window_start=now)
+            db.session.add(rate_record)
+            db.session.commit()
+        else:
+            # Si la ventana de tiempo expiró, resetear
+            if rate_record.window_start < now - timedelta(seconds=ADMIN_RATE_WINDOW):
+                rate_record.request_count = 1
+                rate_record.window_start = now
+            else:
+                # Incrementar contador
+                rate_record.request_count += 1
+                
+                # Verificar si excede el límite
+                if rate_record.request_count > ADMIN_RATE_LIMIT:
+                    db.session.commit()
+                    return jsonify({'error': 'Demasiadas peticiones. Intenta más tarde.'}), 429
+            
+            db.session.commit()
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def _guard():
+    return not current_user.is_authenticated or not current_user.is_superuser
+
+
+@admin_bp.route('')
+@login_required
+@rate_limit_admin
+def admin():
+    if _guard():
+        return redirect(url_for('game.index'))
+    def _cfg(k, d=''): c = AppConfig.query.filter_by(key=k).first(); return c.value if c else d
+    
+    # Contar videos
+    videos_count = sum(1 for img in Image.query.all() if img.is_video)
+    
+    # Obtener log de compresión si existe
+    compress_log = session.pop('compress_log', None)
+    
+    return render_template('admin.html',
+        messages=Message.query.order_by(Message.created_at.desc()).all(),
+        about=AboutContent.query.first(),
+        images=Image.query.order_by(Image.created_at.desc()).all(),
+        images_count=Image.query.count(),
+        videos_count=videos_count,
+        sources=ImageSource.query.order_by(ImageSource.created_at).all(),
+        upload_sources=ImageSource.query.filter_by(source_type='upload', active=True).all(),
+        feedbacks=FinalFeedback.query.order_by(FinalFeedback.created_at.desc()).all(),
+        users=User.query.order_by(User.created_at if hasattr(User, 'created_at') else User.id).all(),
+        cf_token=_cfg('cf_token'), cf_port=_cfg('cf_port','5000'),
+        ts_email=_cfg('ts_email'), ts_authkey=_cfg('ts_authkey'), ts_hostname=_cfg('ts_hostname'), ts_port=_cfg('ts_port','5000'),
+        community_title=_cfg('community_title', '¡Felicidades!'),
+        community_subtitle=_cfg('community_subtitle', 'Eres parte de nuestra Comunidad.'),
+        community_message=_cfg('community_message', 'PedoMoms Love'),
+        blocked_ips=LoginAttempt.query.filter_by(blocked=True).order_by(LoginAttempt.last_attempt.desc()).all(),
+        compress_log=compress_log)
+
+
+@admin_bp.route('/favorites/stats')
+@login_required
+def favorites_stats():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    total = Favorite.query.count()
+    by_session = db.session.query(
+        Favorite.user_session,
+        db.func.count(Favorite.id).label('cnt')
+    ).group_by(Favorite.user_session).order_by(db.func.count(Favorite.id).desc()).all()
+    return jsonify(total=total, by_session=[{'session': r.user_session, 'count': r.cnt} for r in by_session])
+
+
+@admin_bp.route('/favorites/clear-all', methods=['POST'])
+@login_required
+def favorites_clear_all():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    Favorite.query.delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/favorites/clear-session', methods=['POST'])
+@login_required
+def favorites_clear_session():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    uid = request.json.get('session') if request.is_json else request.form.get('session')
+    if not uid:
+        return jsonify(error='Sesión requerida'), 400
+    Favorite.query.filter_by(user_session=uid).delete(synchronize_session=False)
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/deleted-images/count')
+@login_required
+def deleted_images_count():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    from models import DeletedImage
+    total = DeletedImage.query.count()
+    # Contar imágenes eliminadas por el usuario actual
+    user_deleted = DeletedImage.query.filter_by(deleted_by_user_id=current_user.id).count()
+    return jsonify(total=total, user_deleted=user_deleted)
+
+
+@admin_bp.route('/users/count')
+def users_count():
+    # Rating system removed - return 0
+    return jsonify(count=0)
+
+
+@admin_bp.route('/about', methods=['POST'])
+@login_required
+def update_about():
+    if _guard():
+        return redirect(url_for('game.index'))
+    content = request.form.get('content', '')
+    about = AboutContent.query.first()
+    if about:
+        about.content = content
+    else:
+        db.session.add(AboutContent(content=content))
+    db.session.commit()
+    flash('Contenido "Conózcanos" actualizado', 'success')
+    return redirect(url_for('admin.admin') + '#tabConocenos')
+
+
+@admin_bp.route('/community-message', methods=['POST'])
+@login_required
+def update_community_message():
+    if _guard():
+        return redirect(url_for('game.index'))
+    title = request.form.get('title', '').strip()
+    subtitle = request.form.get('subtitle', '').strip()
+    message = request.form.get('message', '').strip()
+
+    for key, value in [('community_title', title), ('community_subtitle', subtitle), ('community_message', message)]:
+        cfg = AppConfig.query.filter_by(key=key).first()
+        if cfg:
+            cfg.value = value
+        else:
+            db.session.add(AppConfig(key=key, value=value))
+
+    db.session.commit()
+    flash('Mensaje de comunidad actualizado', 'success')
+    return redirect(url_for('admin.admin') + '#tabComunidad')
+
+
+@admin_bp.route('/notifications')
+@login_required
+def get_notifications():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    notifications = Notification.query.order_by(Notification.created_at.desc()).limit(10).all()
+    return jsonify([{
+        'id': n.id,
+        'message': n.message,
+        'type': n.notification_type,
+        'read': n.read,
+        'created_at': n.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    } for n in notifications])
+
+
+@admin_bp.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    notification = Notification.query.get_or_404(notification_id)
+    notification.read = True
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/send-push', methods=['POST'])
+@login_required
+def send_push_notification():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    
+    message = request.form.get('message', '¡Nueva notificación!')
+    user_session = request.form.get('user_session')
+    
+    from push_helper import send_push_to_all, send_push_to_session
+    
+    if user_session:
+        success = send_push_to_session(user_session, message)
+    else:
+        success = send_push_to_all(message)
+    
+    if success:
+        flash('Notificación enviada exitosamente', 'success')
+    else:
+        flash('Error al enviar notificación', 'error')
+    
+    return redirect(url_for('admin.admin') + '#tabConfig')
+
+
+@admin_bp.route('/change-port', methods=['POST'])
+@login_required
+def change_port():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    
+    new_port = request.form.get('port', '8080')
+    
+    try:
+        new_port = int(new_port)
+        if new_port < 1 or new_port > 65535:
+            flash('Puerto inválido. Debe estar entre 1 y 65535', 'error')
+            return redirect(url_for('admin.admin') + '#tabConfig')
+        
+        # Actualizar config.json
+        config = {'port': new_port}
+        with open('config.json', 'w') as f:
+            json.dump(config, f)
+        
+        flash(f'Puerto cambiado a {new_port}. Reinicia la app para aplicar cambios.', 'success')
+        return redirect(url_for('admin.admin') + '#tabConfig')
+    
+    except ValueError:
+        flash('Puerto inválido. Debe ser un número.', 'error')
+        return redirect(url_for('admin.admin') + '#tabConfig')
+
+
+# ── Bienvenida Nita ─────────────────────────────────────────────
+
+def _cfg_get(key, default=''):
+    c = AppConfig.query.filter_by(key=key).first()
+    return c.value if c else default
+
+def _cfg_set(key, value):
+    c = AppConfig.query.filter_by(key=key).first()
+    if c:
+        c.value = value
+    else:
+        db.session.add(AppConfig(key=key, value=value))
+
+
+@admin_bp.route('/nita-welcome')
+@login_required
+def nita_welcome_config():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    return jsonify(
+        title=_cfg_get('nita_welcome_title', '¡Bienvenida! 💖'),
+        emoji=_cfg_get('nita_welcome_emoji', '🌸'),
+        msg=_cfg_get('nita_welcome_msg', ''),
+        active=_cfg_get('nita_welcome_active', '0') == '1'
+    )
+
+
+@admin_bp.route('/nita-welcome/save', methods=['POST'])
+@login_required
+def nita_welcome_save():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    data = request.json or {}
+    _cfg_set('nita_welcome_title', data.get('title', '¡Bienvenida! 💖').strip() or '¡Bienvenida! 💖')
+    _cfg_set('nita_welcome_emoji', data.get('emoji', '🌸').strip() or '🌸')
+    _cfg_set('nita_welcome_msg', data.get('msg', '').strip())
+    if data.get('activate'):
+        _cfg_set('nita_welcome_active', '1')
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/nita-welcome/activate', methods=['POST'])
+@login_required
+def nita_welcome_activate():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    _cfg_set('nita_welcome_active', '1')
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/nita-welcome/deactivate', methods=['POST'])
+@login_required
+def nita_welcome_deactivate():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    _cfg_set('nita_welcome_active', '0')
+    db.session.commit()
+    return jsonify(success=True)
+
+
+@admin_bp.route('/nita-welcome/send-now', methods=['POST'])
+@login_required
+def nita_welcome_send_now():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    if not _chat_socketio:
+        return jsonify(error='Socket no disponible'), 500
+    msg = _cfg_get('nita_welcome_msg', '')
+    title = _cfg_get('nita_welcome_title', '¡Bienvenida! 💖')
+    emoji = _cfg_get('nita_welcome_emoji', '🌸')
+    if not msg:
+        return jsonify(error='Sin mensaje guardado'), 400
+    
+    import logging
+    logging.basicConfig(filename='push_debug.log', level=logging.INFO)
+    logging.info(f"[WELCOME] Enviando mensaje de bienvenida: {title}")
+    
+    # Emitir por socket si está online (usar socket de chat)
+    _chat_socketio.emit('nita_welcome', {
+        'title': title, 'emoji': emoji, 'msg': msg
+    }, to='user_nitalaosita')
+    
+    # Enviar push si está offline
+    from models import PushSubscription
+    from push_helper import send_push_notification
+    import json
+    import os
+    
+    subs = PushSubscription.query.filter_by(username='nitalaosita').all()
+    logging.info(f"[WELCOME] Suscripciones encontradas para nitalaosita: {len(subs)}")
+    
+    if subs:
+        vapid_file = 'vapid_keys.json'
+        if os.path.exists(vapid_file):
+            with open(vapid_file, 'r') as f:
+                keys = json.load(f)
+            payload = json.dumps({
+                'type': 'welcome',
+                'title': f'{emoji} {title}',
+                'body': msg[:100] + '...' if len(msg) > 100 else msg
+            })
+            logging.info(f"[WELCOME] Payload: {payload}")
+            sent_count = 0
+            for sub in subs:
+                try:
+                    result = send_push_notification(sub, payload, keys['private_key'])
+                    if result:
+                        sent_count += 1
+                        logging.info(f"[WELCOME] Push enviado exitosamente")
+                    else:
+                        logging.info(f"[WELCOME] Push falló")
+                except Exception as e:
+                    logging.error(f"[WELCOME] Error enviando push: {e}")
+            logging.info(f"[WELCOME] Total enviados: {sent_count}/{len(subs)}")
+        else:
+            logging.error(f"[WELCOME] Archivo VAPID no encontrado")
+    else:
+        logging.warning(f"[WELCOME] No hay suscripciones para nitalaosita")
+    
+    return jsonify(success=True)
+
+
+# ── Botón Reportar Nita ──────────────────────────────────────────
+
+@admin_bp.route('/nita-report')
+@login_required
+def nita_report_config():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    return jsonify(
+        enabled=_cfg_get('nita_report_enabled', '0') == '1',
+        title=_cfg_get('nita_report_title', '¡Gracias por reportar! 🚩'),
+        emoji=_cfg_get('nita_report_emoji', '🚩'),
+        msg=_cfg_get('nita_report_msg', ''),
+    )
+
+
+@admin_bp.route('/nita-report/save', methods=['POST'])
+@login_required
+def nita_report_save():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    data = request.json or {}
+    _cfg_set('nita_report_enabled', '1' if data.get('enabled') else '0')
+    _cfg_set('nita_report_title', data.get('title', '¡Gracias por reportar! 🚩').strip() or '¡Gracias por reportar! 🚩')
+    _cfg_set('nita_report_emoji', data.get('emoji', '🚩').strip() or '🚩')
+    _cfg_set('nita_report_msg', data.get('msg', '').strip())
+    db.session.commit()
+    return jsonify(success=True)
+
+
+# ── Respaldo / Backup ─────────────────────────────────────────────
+
+@admin_bp.route('/backup/download')
+@login_required
+def backup_download():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+
+    root = current_app.root_path
+
+    # Carpetas y archivos a incluir
+    INCLUDE_DIRS = ['routes', 'templates', 'static', 'uploads', 'instance']
+    INCLUDE_EXTS = {'.py', '.txt', '.json', '.md', '.vbs', '.bat', '.ps1', '.html', '.css', '.js', '.svg', '.ico', '.db'}
+    EXCLUDE_DIRS = {'__pycache__', '.git', 'venv', 'env', 'nssm-2.24', 'respaldo_arranque_5', '.vscode'}
+    EXCLUDE_FILES = {'cert.pem', 'key.pem', 'nssm.zip'}
+
+    buf = io.BytesIO()
+    ts = datetime.now().strftime('%Y%m%d_%H%M')
+    zip_name = f'photobearrate_backup_{ts}.zip'
+
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+
+        # Archivos en la raíz
+        for fname in os.listdir(root):
+            fpath = os.path.join(root, fname)
+            if os.path.isfile(fpath) and fname not in EXCLUDE_FILES:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in INCLUDE_EXTS or fname in ('requirements.txt', 'config.json', 'vapid_keys.json'):
+                    zf.write(fpath, fname)
+
+        # Carpetas completas
+        for dname in INCLUDE_DIRS:
+            dpath = os.path.join(root, dname)
+            if not os.path.isdir(dpath):
+                continue
+            for dirpath, dirnames, filenames in os.walk(dpath):
+                # Excluir subdirectorios no deseados
+                dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+                for fname in filenames:
+                    fpath = os.path.join(dirpath, fname)
+                    ext = os.path.splitext(fname)[1].lower()
+                    # Incluir todos los archivos en uploads/instance (datos),
+                    # y solo extensiones permitidas en el resto
+                    rel = os.path.relpath(fpath, root)
+                    top = rel.split(os.sep)[0]
+                    if top in ('uploads', 'instance'):
+                        zf.write(fpath, rel)
+                    elif ext in INCLUDE_EXTS and fname not in EXCLUDE_FILES:
+                        zf.write(fpath, rel)
+
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=zip_name
+    )
+
+@admin_bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if not current_user.is_superuser:
+        return jsonify(error='No autorizado'), 403
+
+    if request.method == 'POST':
+        user_count = request.form.get('user_count', '').strip()
+        chat_info = request.form.get('chat_info', '').strip()
+        show_chat_info = request.form.get('show_chat_info') == 'true'
+
+        # Save to AppConfig
+        if user_count:
+            config = AppConfig.query.filter_by(key='user_count_message').first()
+            if config:
+                config.value = user_count
+            else:
+                config = AppConfig(key='user_count_message', value=user_count)
+                db.session.add(config)
+
+        if chat_info is not None:
+            config = AppConfig.query.filter_by(key='chat_info_message').first()
+            if config:
+                config.value = chat_info
+            else:
+                config = AppConfig(key='chat_info_message', value=chat_info)
+                db.session.add(config)
+
+        config = AppConfig.query.filter_by(key='show_chat_info').first()
+        if config:
+            config.value = 'true' if show_chat_info else 'false'
+        else:
+            config = AppConfig(key='show_chat_info', value='true' if show_chat_info else 'false')
+            db.session.add(config)
+
+        db.session.commit()
+        flash('Configuración guardada', 'success')
+        return redirect(url_for('admin.settings'))
+
+    # Get current values
+    user_count_config = AppConfig.query.filter_by(key='user_count_message').first()
+    chat_info_config = AppConfig.query.filter_by(key='chat_info_message').first()
+    show_chat_info_config = AppConfig.query.filter_by(key='show_chat_info').first()
+
+    return render_template('admin_settings.html',
+                           user_count=user_count_config.value if user_count_config else '1004 Usuarios en este sitio',
+                           chat_info=chat_info_config.value if chat_info_config else 'Este es un chat exclusivo e independiente para un grupo muy selecto de Pedófilas mujeres. No chateamos en grupo por la alta probabilidad de ser evidenciadas. Las personas aqui en este chat se llaman con @antes del nombre La Moderadora de esta sección es @Sorane cualquier pregunta a ella',
+                           show_chat_info=show_chat_info_config.value == 'true' if show_chat_info_config else True)
+
+@admin_bp.route('/api/settings', methods=['GET'])
+def api_settings():
+        # Public endpoint - anyone can read settings
+        user_count_config = AppConfig.query.filter_by(key='user_count_message').first()
+        chat_info_config = AppConfig.query.filter_by(key='chat_info_message').first()
+        show_chat_info_config = AppConfig.query.filter_by(key='show_chat_info').first()
+
+        return jsonify({
+            'user_count': user_count_config.value if user_count_config else '1004 Usuarios en este sitio',
+            'chat_info': chat_info_config.value if chat_info_config else 'Este es un chat exclusivo e independiente para un grupo muy selecto de Pedófilas mujeres. No chateamos en grupo por la alta probabilidad de ser evidenciadas. Las personas aqui en este chat se llaman con @antes del nombre La Moderadora de esta sección es @Sorane cualquier pregunta a ella',
+            'show_chat_info': show_chat_info_config.value == 'true' if show_chat_info_config else True
+        })
