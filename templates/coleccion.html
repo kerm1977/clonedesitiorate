@@ -25,6 +25,13 @@
                 <div class="w-100 video-lazy" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}"
                      style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
                      onclick="downloadVideo(this)">
+                    <button type="button" class="btn btn-sm position-absolute" title="Copiar enlace"
+                        style="top:8px; left:8px; z-index:10; width:36px; height:36px; border-radius:50%;
+                               background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
+                               display:flex; align-items:center; justify-content:center; color:#0d47a1; font-size:1rem; border:none;"
+                        onclick="event.stopPropagation(); copyColeccionLink('{{ url_for('coleccion.serve_file', filename=f.name, _external=True) }}')">
+                        <i class="bi bi-share"></i>
+                    </button>
                     {% if f.thumb %}
                     <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
                     {% else %}
@@ -37,6 +44,13 @@
                 {% elif f.type == 'video' %}
                 <div class="w-100" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
                      onclick="downloadVideo(this)">
+                    <button type="button" class="btn btn-sm position-absolute" title="Copiar enlace"
+                        style="top:8px; left:8px; z-index:10; width:36px; height:36px; border-radius:50%;
+                               background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
+                               display:flex; align-items:center; justify-content:center; color:#0d47a1; font-size:1rem; border:none;"
+                        onclick="event.stopPropagation(); copyColeccionLink('{{ url_for('coleccion.serve_file', filename=f.name, _external=True) }}')">
+                        <i class="bi bi-share"></i>
+                    </button>
                     {% if f.thumb %}
                     <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
                     {% else %}
@@ -143,6 +157,39 @@ function toggleEditOpinion(id, show) {
     if (text) text.style.display = show ? 'none' : 'block';
     if (form) form.style.display = show ? 'block' : 'none';
     if (btn) btn.style.display = show ? 'none' : 'inline-block';
+}
+
+function _copyColeccionLinkFallback(url) {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        if (document.execCommand('copy')) {
+            alert('Enlace copiado: ' + url);
+        } else {
+            alert('No se pudo copiar automáticamente. Enlace: ' + url);
+        }
+    } catch (e) {
+        alert('No se pudo copiar. Enlace: ' + url);
+    }
+    document.body.removeChild(ta);
+}
+
+function copyColeccionLink(url) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Enlace copiado: ' + url);
+        }).catch(() => {
+            _copyColeccionLinkFallback(url);
+        });
+    } else {
+        _copyColeccionLinkFallback(url);
+    }
 }
 </script>
 {% endblock %}
