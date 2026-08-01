@@ -193,15 +193,7 @@
                 🔕
             </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('game.index') }}" class="btn btn-fun-pink btn-sm btn-icon-only" title="Galería de fotos">
-                <i class="bi bi-images"></i>
-            </a>
-            <a href="{{ url_for('coleccion.index') }}" class="btn btn-fun-pink btn-sm btn-icon-only" title="Colecciones">
-                <i class="bi bi-collection"></i>
-            </a>
-            <button id="privateChatBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Chat privado">
-                <i class="bi bi-chat-dots"></i>
-            </button>
+            <button id="privateChatBtn" style="display: none;"></button>
             {% endif %}
             {% if player_name %}
             <form action="{{ url_for('game.clear_name') }}" method="POST" class="m-0">
@@ -221,8 +213,8 @@
                     ⚙️ Admin
                 </a>
                 {% endif %}
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-fun-white btn-sm">
-                    <i class="bi bi-box-arrow-right"></i>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-fun-white btn-sm" title="Cerrar sesión">
+                    <i class="bi bi-box-arrow-right"></i> Salir
                 </a>
             {% endif %}
         </div>

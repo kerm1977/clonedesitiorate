@@ -72,7 +72,6 @@ def login():
 @login_required
 def logout():
     logout_user()
-    session.clear()
     resp = make_response(redirect(url_for('game.index')))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'
     resp.headers['Pragma'] = 'no-cache'
