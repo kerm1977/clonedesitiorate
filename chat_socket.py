@@ -77,14 +77,14 @@ def register_socket_events(socketio):
                             else:
                                 # Ya se reconectó con otro sid
                                 return
-                        socketio.emit('nita_disconnected', {}, broadcast=True)
+                        socketio.emit('nita_disconnected', {})
                         socketio.emit('nita_activity', {
                             'type': 'disconnect',
                             'icon': '🔴',
                             'text': 'Se desconectó',
                             'link': None
-                        }, broadcast=True)
-                        socketio.emit('user_offline', {'username': username}, broadcast=True)
+                        })
+                        socketio.emit('user_offline', {'username': username})
 
                 with _nita_disconnect_lock:
                     _nita_disconnect_timers[username] = threading.Timer(5.0, _nita_gone)

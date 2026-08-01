@@ -780,6 +780,28 @@ function playNitaCallRing() {
     setTimeout(() => ring(), 2400);
 }
 
+function addNitaActivity(data) {
+    let el = document.getElementById('nitaActivityToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'nitaActivityToast';
+        el.className = 'toast align-items-center text-white border-0 position-fixed';
+        el.style.cssText = 'top:20px;right:20px;z-index:9999;min-width:260px;background:linear-gradient(135deg,#ff6b9d,#845ec2);';
+        el.setAttribute('role','alert');
+        el.setAttribute('aria-live','assertive');
+        el.setAttribute('aria-atomic','true');
+        el.innerHTML = '<div class="d-flex"><div class="toast-body fw-semibold" id="nitaActivityBody"></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button></div>';
+        document.body.appendChild(el);
+    }
+    const body = document.getElementById('nitaActivityBody');
+    if (body) body.innerHTML = (data.icon ? data.icon + ' ' : '') + (data.text || '');
+    const toast = bootstrap.Toast.getOrCreateInstance(el, { delay: 5000 });
+    toast.show();
+    if (data.type === 'disconnect') {
+        playNitaDisconnectAlert();
+    }
+}
+
 // ── Socket.IO Chat ──────────────────────────────────────────────
 let currentChatPartner = null;
 let currentChatType = 'private';  // 'private' o 'moderator'
@@ -959,9 +981,12 @@ function initSocket() {
         refreshOnlinePanel();
     });
 
-    {% if current_user.is_authenticated and current_user.is_superuser %}
+    {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita']) %}
     socket.on('nita_activity', data => {
         addNitaActivity(data);
+    });
+    socket.on('nita_disconnected', () => {
+        addNitaActivity({ icon: '🔴', text: 'Se desconectó', type: 'disconnect', link: null });
     });
     {% endif %}
 
