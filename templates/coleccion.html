@@ -11,11 +11,20 @@
     <div class="row g-3">
         {% for f in files %}
         <div class="col-6 col-md-4 col-lg-3">
-            <div class="card border-0 shadow-sm h-100" style="border-radius:16px; overflow:hidden;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:16px; overflow:hidden; position:relative;">
+                {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
+                <a href="{{ url_for('coleccion.serve_file', filename=f.name, download='1') }}" download
+                   style="position:absolute; top:8px; right:8px; z-index:10; width:36px; height:36px; border-radius:50%;
+                          background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
+                          display:flex; align-items:center; justify-content:center; color:#dc3545; font-size:1.1rem; text-decoration:none;"
+                   title="Descargar" onclick="event.stopPropagation();">
+                    ⬇
+                </a>
+                {% endif %}
                 {% if f.type == 'video' and f.playable %}
-                <div class="w-100 video-lazy" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}" data-mime="{{ f.mime }}"
+                <div class="w-100 video-lazy" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}"
                      style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
-                     onclick="loadVideo(this)">
+                     onclick="downloadVideo(this)">
                     {% if f.thumb %}
                     <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
                     {% else %}
@@ -23,11 +32,11 @@
                         <div style="font-size:2.5rem;">🎬</div>
                     </div>
                     {% endif %}
-                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">▶</div>
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">⬇</div>
                 </div>
                 {% elif f.type == 'video' %}
-                <div class="w-100" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
-                     onclick="window.open('{{ url_for('coleccion.serve_file', filename=f.name) }}', '_blank')">
+                <div class="w-100" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
+                     onclick="downloadVideo(this)">
                     {% if f.thumb %}
                     <img src="{{ url_for('coleccion.serve_thumb', filename=f.name) }}" class="w-100" style="height:180px; object-fit:cover;">
                     {% else %}
@@ -44,6 +53,44 @@
                 {% endif %}
                 <div class="card-body p-2 text-center">
                     <small class="text-muted text-truncate d-block" style="font-size:0.75rem;" title="{{ f.name }}">{{ f.name }}</small>
+
+                    {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
+                    <div class="mt-2 text-start">
+                        <p class="text-muted mb-1" style="font-size:0.7rem;"><i class="bi bi-chat-dots me-1"></i>Ahora puedes opinar sobre esta imagen y compartir tu pensar con las moderadoras</p>
+                        <form action="{{ url_for('coleccion.save_opinion') }}" method="POST" class="d-flex flex-column gap-1">
+                            <input type="hidden" name="filename" value="{{ f.name }}">
+                            <input type="text" name="opinion" class="form-control form-control-sm" placeholder="¿Qué piensas de {{ f.name }}?" required style="font-size:0.75rem;">
+                            <button type="submit" class="btn btn-sm" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;border-radius:8px;font-size:0.7rem;">Enviar opinión</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    {% if f.opinions %}
+                    <div class="mt-2 text-start" style="max-height:160px; overflow-y:auto;">
+                        {% for op in f.opinions %}
+                        <div class="small p-2 mb-1" style="background:#f8f0f5;border-radius:6px;font-size:0.75rem;word-wrap:break-word;">
+                            <strong>{{ op.username }}:</strong>
+                            <div id="opinionText{{ op.id }}" class="mt-1">{{ op.opinion }}</div>
+                            {% if (current_user.is_superuser or current_user.username == op.username) %}
+                            <form id="editForm{{ op.id }}" action="{{ url_for('coleccion.edit_opinion', opinion_id=op.id) }}" method="POST" style="display:none;">
+                                <textarea name="opinion" class="form-control form-control-sm mt-1" rows="2" style="font-size:0.75rem;resize:vertical;">{{ op.opinion }}</textarea>
+                                <div class="d-flex gap-1 mt-1">
+                                    <button type="submit" class="btn btn-sm py-0 px-1" style="background:#20c997;color:#fff;font-size:0.65rem;border:none;border-radius:4px;">Guardar</button>
+                                    <button type="button" class="btn btn-sm py-0 px-1" style="background:#6c757d;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="toggleEditOpinion({{ op.id }}, false)">Cancelar</button>
+                                </div>
+                            </form>
+                            <div class="d-flex gap-1 mt-1">
+                                <button type="button" id="editBtn{{ op.id }}" class="btn btn-sm py-0 px-1" style="background:#20c997;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="toggleEditOpinion({{ op.id }}, true)">Editar</button>
+                                <form action="{{ url_for('coleccion.delete_opinion', opinion_id=op.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm py-0 px-1" style="background:#dc3545;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="return confirm('¿Eliminar?')">Borrar</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                            <span class="text-muted d-block mt-1" style="font-size:0.6rem;">{{ op.created_at.strftime('%d/%m %H:%M') }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -57,21 +104,16 @@
 </div>
 
 <script>
-function loadVideo(el) {
+function downloadVideo(el) {
     const src = el.dataset.src;
-    const mime = el.dataset.mime;
-    const video = document.createElement('video');
-    video.className = 'w-100';
-    video.style.cssText = 'height:180px; object-fit:cover;';
-    video.controls = true;
-    video.autoplay = true;
-    video.preload = 'auto';
-    const source = document.createElement('source');
-    source.src = src;
-    source.type = mime;
-    video.appendChild(source);
-    el.replaceWith(video);
-    video.play().catch(() => {});
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src + (src.includes('?') ? '&' : '?') + 'download=1';
+    a.download = '';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 100);
 }
 
 function openImageModal(src) {
@@ -92,6 +134,15 @@ function openImageModal(src) {
     modal.appendChild(img);
     modal.onclick = () => document.body.removeChild(modal);
     document.body.appendChild(modal);
+}
+
+function toggleEditOpinion(id, show) {
+    const text = document.getElementById('opinionText' + id);
+    const form = document.getElementById('editForm' + id);
+    const btn = document.getElementById('editBtn' + id);
+    if (text) text.style.display = show ? 'none' : 'block';
+    if (form) form.style.display = show ? 'block' : 'none';
+    if (btn) btn.style.display = show ? 'none' : 'inline-block';
 }
 </script>
 {% endblock %}

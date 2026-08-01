@@ -29,8 +29,8 @@ def register_game_images_routes(bp):
         # Detectar MIME type correcto para videos
         mime_type, _ = mimetypes.guess_type(img.filepath)
         if mime_type:
-            return send_file(img.filepath, mimetype=mime_type)
-        return send_file(img.filepath)
+            return send_file(img.filepath, mimetype=mime_type, conditional=True)
+        return send_file(img.filepath, conditional=True)
 
     @bp.route('/img/<int:image_id>/thumb')
     def serve_thumbnail(image_id):
@@ -52,7 +52,7 @@ def register_game_images_routes(bp):
             response.headers['Cache-Control'] = 'public, max-age=604800'
             return response
         except Exception:
-            return send_file(img.filepath)
+            return send_file(img.filepath, conditional=True)
 
     @bp.route('/img/<int:image_id>/download')
     @login_required
@@ -60,7 +60,7 @@ def register_game_images_routes(bp):
         img = Image.query.get_or_404(image_id)
         if not os.path.exists(img.filepath):
             return "Imagen no encontrada", 404
-        return send_file(img.filepath, as_attachment=True, download_name=img.filename)
+        return send_file(img.filepath, as_attachment=True, download_name=img.filename, conditional=True)
 
     @bp.route('/search-folder')
     @login_required

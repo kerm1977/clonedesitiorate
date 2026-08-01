@@ -74,6 +74,13 @@ class Notification(db.Model):
     notification_type=db.Column(db.String(50),default='info')
     read=db.Column(db.Boolean,default=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
+class CollectionOpinion(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    filename=db.Column(db.String(255),nullable=False,index=True)
+    username=db.Column(db.String(80),nullable=False)
+    opinion=db.Column(db.Text,nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+
 class ImageQuestion(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     image_id=db.Column(db.Integer,db.ForeignKey('image.id'),nullable=False)

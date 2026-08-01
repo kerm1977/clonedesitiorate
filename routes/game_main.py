@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, session, flash, jsonify
+from flask import render_template, request, redirect, url_for, session, flash, jsonify, make_response
 from flask_login import current_user
 from models import db, Image, Favorite, FinalFeedback, AppConfig, WeeklyStoryComment, StoryComment, CommentRead, ImageComment, Message, ImageQuestion
 from utils import get_session_id
@@ -23,10 +23,16 @@ def register_game_routes(bp):
             session.permanent = True
         return redirect(url_for('game.index'))
 
+    def _set_no_cache(resp):
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
+
     @bp.route('/')
     def index():
         if not current_user.is_authenticated:
-            return render_template('login.html')
+            return _set_no_cache(make_response(render_template('login.html')))
         
         page = request.args.get('page', 1, type=int)
         per_page = 30
@@ -70,13 +76,13 @@ def register_game_routes(bp):
                 ).first():
                     unread_count += 1
         
-        return render_template('index.html', images=images.items,
+        return _set_no_cache(make_response(render_template('index.html', images=images.items,
                                player_name=player_name,
                                unread_comments=unread_count,
                                weekly_comments_count=weekly_comments_count,
                                page=page,
                                has_next=images.has_next,
-                               total_pages=images.pages)
+                               total_pages=images.pages)))
 
     @bp.route('/images')
     def get_images():
@@ -92,6 +98,7 @@ def register_game_routes(bp):
                 'id': img.id,
                 'url': url_for('game.serve_image', image_id=img.id),
                 'thumb_url': url_for('game.serve_thumbnail', image_id=img.id) if not img.is_video else url_for('game.serve_image', image_id=img.id),
+                'download_url': url_for('game.download_image', image_id=img.id),
                 'filename': img.filename,
                 'is_video': img.is_video
             } for img in images.items],

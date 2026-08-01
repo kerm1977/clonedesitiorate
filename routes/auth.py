@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, make_response, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from models import db, User, Notification, LoginAttempt
@@ -36,7 +36,8 @@ def login():
             # Login exitoso: limpiar intentos fallidos
             if attempt:
                 db.session.delete(attempt)
-            login_user(u)
+            login_user(u, remember=True)
+            session.permanent = True
             if u.username == 'nitalaosita' and _auth_socketio:
                 _auth_socketio.emit('nita_connected', {}, namespace='/')
             username = u.username if u.username else u.email
@@ -71,4 +72,9 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('game.index'))
+    session.clear()
+    resp = make_response(redirect(url_for('game.index')))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp

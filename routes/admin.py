@@ -79,8 +79,16 @@ def admin():
         return redirect(url_for('game.index'))
     def _cfg(k, d=''): c = AppConfig.query.filter_by(key=k).first(); return c.value if c else d
     
-    # Contar videos
+    # Contar videos y archivos en colección
     videos_count = sum(1 for img in Image.query.all() if img.is_video)
+    coleccion_folder = r'E:\coleccion'
+    coleccion_count = 0
+    if os.path.isdir(coleccion_folder):
+        for name in os.listdir(coleccion_folder):
+            if os.path.isfile(os.path.join(coleccion_folder, name)):
+                ext = os.path.splitext(name)[1].lower()
+                if ext in {'.jpg','.jpeg','.png','.gif','.bmp','.webp','.heic','.heif','.mp4','.webm','.mov','.avi','.mkv'}:
+                    coleccion_count += 1
     
     # Obtener log de compresión si existe
     compress_log = session.pop('compress_log', None)
@@ -91,6 +99,7 @@ def admin():
         images=Image.query.order_by(Image.created_at.desc()).all(),
         images_count=Image.query.count(),
         videos_count=videos_count,
+        coleccion_count=coleccion_count,
         sources=ImageSource.query.order_by(ImageSource.created_at).all(),
         upload_sources=ImageSource.query.filter_by(source_type='upload', active=True).all(),
         feedbacks=FinalFeedback.query.order_by(FinalFeedback.created_at.desc()).all(),

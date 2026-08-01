@@ -3,9 +3,14 @@ from flask_login import current_user
 from flask_socketio import emit, join_room, leave_room
 from models import db, ChatMessage, User
 from datetime import datetime
+import threading
 
 # {username: sid}
 _user_sids = {}
+
+# Período de gracia para transiciones de página de nitalaosita
+_nita_disconnect_timers = {}
+_nita_disconnect_lock = threading.Lock()
 
 def get_chat_room(user1, user2):
     return 'chat__' + '__'.join(sorted([user1, user2]))
@@ -24,6 +29,25 @@ def register_socket_events(socketio):
     @socketio.on('connect')
     def on_connect():
         if current_user.is_authenticated:
+            if current_user.username == 'nitalaosita':
+                with _nita_disconnect_lock:
+                    timer = _nita_disconnect_timers.pop(current_user.username, None)
+                    _user_sids[current_user.username] = request.sid
+                join_room(f'user_{current_user.username}')
+                if timer:
+                    timer.cancel()
+                    # Reconexión dentro del período de gracia: no avisar desconexión
+                    return
+                emit('nita_activity', {
+                    'type': 'connect',
+                    'icon': '🟢',
+                    'text': 'Se conectó',
+                    'link': None
+                }, broadcast=True)
+                emit('user_online', {'username': current_user.username}, broadcast=True)
+                emit('online_list', {'online': list(_user_sids.keys())}, to=request.sid)
+                return
+
             _user_sids[current_user.username] = request.sid
             # Cada usuario se une a su sala personal para recibir notificaciones directas
             join_room(f'user_{current_user.username}')
@@ -35,26 +59,38 @@ def register_socket_events(socketio):
             # Si es una moderadora, notificar a nitalaosita
             if current_user.email in ['bolita@mummy.com', 'doll@mummy.com']:
                 emit('user_online', {'username': current_user.username}, to='user_nitalaosita')
-            
-            if current_user.username == 'nitalaosita':
-                emit('nita_activity', {
-                    'type': 'connect',
-                    'icon': '🟢',
-                    'text': 'Se conectó',
-                    'link': None
-                }, broadcast=True)
 
     @socketio.on('disconnect')
     def on_disconnect():
         if current_user.is_authenticated:
             if current_user.username == 'nitalaosita':
-                emit('nita_activity', {
-                    'type': 'disconnect',
-                    'icon': '🔴',
-                    'text': 'Se desconectó',
-                    'link': None
-                }, broadcast=True)
-                emit('nita_disconnected', {}, broadcast=True)
+                username = current_user.username
+                old_sid = _user_sids.get(username)
+                app = current_app._get_current_object()
+
+                def _nita_gone():
+                    with app.app_context():
+                        with _nita_disconnect_lock:
+                            _nita_disconnect_timers.pop(username, None)
+                            if _user_sids.get(username) == old_sid:
+                                _user_sids.pop(username, None)
+                            else:
+                                # Ya se reconectó con otro sid
+                                return
+                        socketio.emit('nita_disconnected', {}, broadcast=True)
+                        socketio.emit('nita_activity', {
+                            'type': 'disconnect',
+                            'icon': '🔴',
+                            'text': 'Se desconectó',
+                            'link': None
+                        }, broadcast=True)
+                        socketio.emit('user_offline', {'username': username}, broadcast=True)
+
+                with _nita_disconnect_lock:
+                    _nita_disconnect_timers[username] = threading.Timer(5.0, _nita_gone)
+                    _nita_disconnect_timers[username].start()
+                return
+
             _user_sids.pop(current_user.username, None)
             emit('user_offline', {'username': current_user.username}, broadcast=True)
 

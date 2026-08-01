@@ -157,6 +157,9 @@
             0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 2px 6px rgba(229, 57, 53, 0.35); }
             50% { opacity: 0.82; transform: scale(1.08); box-shadow: 0 4px 14px rgba(229, 57, 53, 0.55); }
         }
+    .btn-pulse { border: 3px solid var(--yellow) !important; animation: pulse-btn 1.5s ease-in-out infinite; }
+    .btn-pulse:hover { animation: none; transform: scale(1.1); }
+    .btn-pulse:active { transform: scale(0.95); }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -190,13 +193,15 @@
                 🔕
             </button>
             {% if current_user.is_authenticated %}
-            <button id="privateChatBtn" style="display: none;"></button>
-            <a href="{{ url_for('game.favorites') }}"
-               id="navFavBtn"
-               class="btn btn-fun-white btn-sm nav-fav-btn"
-               title="Mis favoritas">
-                ❤️ <span id="navFavCount">{{ favorites_count if favorites_count else 0 }}</span>
+            <a href="{{ url_for('game.index') }}" class="btn btn-fun-pink btn-sm btn-icon-only" title="Galería de fotos">
+                <i class="bi bi-images"></i>
             </a>
+            <a href="{{ url_for('coleccion.index') }}" class="btn btn-fun-pink btn-sm btn-icon-only" title="Colecciones">
+                <i class="bi bi-collection"></i>
+            </a>
+            <button id="privateChatBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Chat privado">
+                <i class="bi bi-chat-dots"></i>
+            </button>
             {% endif %}
             {% if player_name %}
             <form action="{{ url_for('game.clear_name') }}" method="POST" class="m-0">
@@ -243,38 +248,6 @@
 {% endwith %}
 
 {% block content %}{% endblock %}
-
-<!-- Floating Options Button (global) -->
-<div class="floating-options-wrapper">
-    <div class="floating-options-btn" id="floatingOptionsBtn" onclick="toggleOptions()">
-        <span class="options-icon">⋮</span>
-    </div>
-</div>
-
-<!-- Options Menu (global) -->
-<div class="options-menu" id="optionsMenu" style="display: none;">
-    <div class="options-item" onclick="window.location.href='{{ url_for('coleccion.index') }}'" style="background:linear-gradient(135deg,rgba(255,107,157,0.08),rgba(229,57,53,0.08));">
-        <span class="options-icon" style="font-size:1.2rem;">🖼️</span> Colecciones
-    </div>
-    {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
-    <div class="options-item" onclick="openModeratorChat()">
-        <span class="options-icon">🛡️</span> Chat Individual
-    </div>
-    {% endif %}
-    {% if current_user.is_authenticated and current_user.is_superuser %}
-    <div class="options-item" onclick="openSuperModeratorChat()">
-        <span class="options-icon">🛡️</span> Chat Individual
-    </div>
-    {% endif %}
-    <div class="options-item" onclick="window.location.href='{{ url_for('game.favorites') }}'">
-        <span class="options-icon">❤️</span> Mis favoritas
-    </div>
-    {% if current_user.is_authenticated and current_user.is_superuser %}
-    <div class="options-item" onclick="window.location.href='{{ url_for('admin.admin') }}'">
-        <span class="options-icon">⚙️</span> Panel Admin
-    </div>
-    {% endif %}
-</div>
 
 <script src="{{ url_for('static', filename='js/push-notifications.min.js') }}"></script>
 
@@ -397,7 +370,7 @@
 {% if current_user.is_authenticated and current_user.username == 'nitalaosita' %}
 <!-- Botón notificación superusuario para nitalaosita -->
 <button id="superNotifBtn" onclick="openSuperChat()" title="Mensaje nuevo"
-    style="display:none;position:fixed;bottom:86px;right:20px;z-index:9999;width:52px;height:52px;
+    style="display:none;position:fixed;bottom:268px;right:20px;z-index:9999;width:52px;height:52px;
            border-radius:50%;background:linear-gradient(135deg,#845ec2,#ff6b9d);border:none;
            color:#fff;font-size:1.4rem;box-shadow:0 4px 16px rgba(132,94,194,0.5);
            cursor:pointer;align-items:center;justify-content:center;animation:pulse 1s infinite;">
@@ -408,17 +381,72 @@
 </button>
 {% endif %}
 
-{% if current_user.is_authenticated and current_user.is_superuser %}
-<!-- Botón flotante actividad Nita -->
-<button id="nitaActivityFab" onclick="toggleNitaPanel()" title="Actividad de Nita"
-    style="position:fixed;bottom:86px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
-           background:linear-gradient(135deg,#ff6b9d,#845ec2);border:none;color:#fff;font-size:1.4rem;
-           box-shadow:0 4px 16px rgba(132,94,194,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+{% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
+<!-- Botón flotante Colecciones (Nitalaosita) -->
+<button onclick="window.location.href='{{ url_for('coleccion.index') }}'" title="Colecciones"
+    style="position:fixed;bottom:206px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+           background:linear-gradient(135deg,#ff6b9d,#e53935);border:none;color:#fff;font-size:1.4rem;
+           box-shadow:0 4px 16px rgba(229,57,53,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
     🐻
-    <span id="nitaBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc3545;
-          color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.65rem;font-weight:700;
-          display:none;align-items:center;justify-content:center;">0</span>
 </button>
+
+<!-- Botón flotante Chat Individual -->
+<button class="btn-pulse" onclick="{% if current_user.username == 'nitalaosita' %}openModeratorChat(){% elif current_user.is_superuser %}openSuperModeratorChat(){% else %}openChat('nitalaosita'){% endif %}" title="Chat Individual"
+    style="position:fixed;bottom:144px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+           background:linear-gradient(135deg,#845ec2,#6c3fb0);border:none;color:#fff;font-size:1.4rem;
+           box-shadow:0 4px 16px rgba(132,94,194,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+    🛡️
+</button>
+
+<!-- Botón flotante Galería (Nitalaosita) -->
+<button onclick="window.location.href='{{ url_for('game.index') }}'" title="Galería"
+    style="position:fixed;bottom:82px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+           background:linear-gradient(135deg,#2196f3,#0d47a1);border:none;color:#fff;font-size:1.4rem;
+           box-shadow:0 4px 16px rgba(33,150,243,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+    📷
+</button>
+{% endif %}
+
+{% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
+<!-- Botón flotante subir material -->
+<button id="nitaUploadFab" onclick="openNitaUploadModal()" title="Subir material"
+    style="position:fixed;bottom:20px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+           background:linear-gradient(135deg,#28a745,#20c997);border:none;color:#fff;font-size:1.6rem;
+           box-shadow:0 4px 16px rgba(40,167,69,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+    ☁️
+</button>
+
+<!-- Modal subir material Nita -->
+<div class="modal fade" id="nitaUploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:none;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0" style="background:linear-gradient(135deg,#28a745,#20c997);">
+                <span class="text-white fw-bold">☁️ Sube tu contenido</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="nitaUploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Destino</label>
+                        <select class="form-select" id="nitaUploadDestination" name="destination">
+                            <option value="images">📷 Imágenes normales</option>
+                            <option value="coleccion">🎞️ Colecciones</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Archivo</label>
+                        <input class="form-control" type="file" id="nitaUploadFile" name="file" accept="image/*,video/*" required>
+                    </div>
+                    <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#28a745,#20c997);color:#fff;border-radius:12px;">
+                        Subir
+                    </button>
+                </form>
+                <div id="nitaUploadResult" class="mt-3 small text-center" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Panel actividad Nita -->
 <div id="nitaActivityPanel" style="display:none;position:fixed;bottom:148px;right:20px;z-index:9998;
@@ -787,6 +815,45 @@ function openSuperChat() {
     }
 }
 {% endif %}
+
+let _nitaUploadModal = null;
+function openNitaUploadModal() {
+    const el = document.getElementById('nitaUploadModal');
+    if (!_nitaUploadModal) _nitaUploadModal = new bootstrap.Modal(el);
+    _nitaUploadModal.show();
+}
+
+async function submitNitaUpload(e) {
+    e.preventDefault();
+    const form = document.getElementById('nitaUploadForm');
+    const result = document.getElementById('nitaUploadResult');
+    const btn = form.querySelector('button[type="submit"]');
+    if (!form.file.files.length) { alert('Selecciona un archivo.'); return; }
+
+    const data = new FormData(form);
+    btn.disabled = true;
+    btn.textContent = 'Subiendo...';
+    result.style.display = 'none';
+    try {
+        const r = await fetch('/nita-upload', { method: 'POST', body: data });
+        const d = await r.json();
+        result.textContent = d.success ? '✅ Subido correctamente.' : '❌ Error: ' + (d.error || 'No se pudo subir');
+        result.style.color = d.success ? '#28a745' : '#dc3545';
+        result.style.display = 'block';
+        if (d.success) form.reset();
+    } catch(e) {
+        result.textContent = '❌ Error de red: ' + e;
+        result.style.color = '#dc3545';
+        result.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Subir';
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const nitaUploadForm = document.getElementById('nitaUploadForm');
+    if (nitaUploadForm) nitaUploadForm.addEventListener('submit', submitNitaUpload);
+});
 
 {% if current_user.is_authenticated and current_user.is_superuser %}
 // ── Panel de actividad de Nita (scope global) ──────────────────

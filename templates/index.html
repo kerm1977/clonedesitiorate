@@ -123,8 +123,8 @@
     <!-- Pinterest Grid -->
     <div class="pinterest-grid" id="imageGrid">
         {% for image in images %}
-        <div class="pinterest-item" data-image-id="{{ image.id }}">
-            <button class="heart-btn" onclick="toggleFavorite({{ image.id }}, this)" title="Guardar en favoritos">
+        <div class="pinterest-item" data-image-id="{{ image.id }}" data-filename="{{ image.filename }}" data-dl="{{ url_for('game.download_image', image_id=image.id) }}" data-is-video="{{ 'true' if image.is_video else 'false' }}">
+            <button class="heart-btn" onclick="event.stopPropagation(); showFavoritesRemovedModal();" title="Sistema de favoritos eliminado">
                 <i class="bi bi-heart"></i>
             </button>
             {% if current_user.is_authenticated and (current_user.username == 'nitalaosita' or current_user.is_superuser) %}
@@ -214,36 +214,43 @@
 {% include 'partials/game_modals.html' %}
 
 <!-- Image Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fun-title" id="imageModalTitle">Imagen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center p-0" style="position:relative;">
-                <div id="imageModalContent" style="position:relative;display:inline-block;width:100%;"></div>
-                <div id="imageModalActions" style="position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:20;">
-                    <button id="modalFavBtn" onclick="toggleFavoriteModal()" title="Favorito"
-                        style="background:transparent;border:none;font-size:26px;color:white;text-shadow:0 1px 5px rgba(0,0,0,0.7);cursor:pointer;padding:0;line-height:1;transition:transform 0.2s;">
-                        <i class="bi bi-heart"></i>
-                    </button>
-                    {% if current_user.is_authenticated and (current_user.username == 'nitalaosita' or current_user.is_superuser) %}
-                    <button id="modalShareBtn" onclick="shareImageToChat(window._modalImageId, this)" title="Compartir en chat"
-                        style="background:transparent;border:none;font-size:24px;color:white;text-shadow:0 1px 5px rgba(0,0,0,0.7);cursor:pointer;padding:0;line-height:1;transition:transform 0.2s;">
-                        <i class="bi bi-share"></i>
-                    </button>
-                    {% endif %}
-                </div>
-                <div class="p-3">
-                    <a id="imageDownloadBtn" href="#" class="btn btn-fun-pink" download>
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="background:#000;border:none;">
+            <div class="modal-header" style="background:#111;border-bottom:1px solid #333;">
+                <h5 class="modal-title text-white text-truncate" id="imageModalTitle" style="max-width:50%;font-size:1rem;">Imagen</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="imageDownloadBtn" href="#" class="btn btn-fun-pink btn-sm rounded-pill" download>
                         <i class="bi bi-download"></i> Descargar
                     </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
+            </div>
+            <div class="modal-body p-0 d-flex align-items-center justify-content-center" style="min-height:70vh;background:#000;">
+                <div id="imageModalContent" style="width:100%;text-align:center;"></div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Favoritos eliminados -->
+<div class="modal fade" id="favoritesRemovedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">❌ Favoritos eliminados</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>El sistema de favoritos fue eliminado. Ahora solo descarga las imágenes que más te gustan.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-fun-pink" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Limpiar el modal cuando se cierre para evitar fondo gris
 document.getElementById('imageModal').addEventListener('hidden.bs.modal', function () {
@@ -259,22 +266,8 @@ document.getElementById('imageModal').addEventListener('hidden.bs.modal', functi
 <script>
 let currentPage = {{ page }};
 
-function toggleFavorite(imageId, btn) {
-    event.stopPropagation();
-    fetch('/img/' + imageId + '/favorite', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            if (data.favorited) {
-                btn.classList.add('favorited');
-                btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
-            } else {
-                btn.classList.remove('favorited');
-                btn.innerHTML = '<i class="bi bi-heart"></i>';
-            }
-            // Update nav count
-            const navCount = document.getElementById('navFavCount');
-            if (navCount) navCount.textContent = data.favorites_count;
-        });
+function showFavoritesRemovedModal() {
+    new bootstrap.Modal(document.getElementById('favoritesRemovedModal')).show();
 }
 
 function shareImageToChat(imageId, btn) {
@@ -339,53 +332,37 @@ function shareImageToChat(imageId, btn) {
     }, 500);
 }
 
+let imageModal = null;
+
 function openImageModal(imageId) {
-    window._modalImageId = imageId;
-    fetch('/image/' + imageId + '/info')
-        .then(r => r.json())
-        .then(data => {
-            window._modalIsFav = data.is_favorited;
-            document.getElementById('imageModalTitle').textContent = data.filename;
-            const content = document.getElementById('imageModalContent');
-            const downloadBtn = document.getElementById('imageDownloadBtn');
-            
-            if (data.is_video) {
-                content.innerHTML = '<video src="' + data.url + '" controls style="max-width:100%;border-radius:12px;width:100%;"></video>';
-            } else {
-                content.innerHTML = '<img src="' + data.url + '" style="max-width:100%;border-radius:12px;width:100%;">';
-            }
-            downloadBtn.href = data.download_url;
-            
-            const favBtn = document.getElementById('modalFavBtn');
-            if (favBtn) {
-                favBtn.querySelector('i').className = data.is_favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
-                favBtn.style.color = data.is_favorited ? '#ff4d8d' : 'white';
-            }
-            
-            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-            modal.show();
-        });
+    const wrap = document.querySelector('[data-image-id="' + imageId + '"]');
+    if (!wrap) return;
+    
+    const isVideo = wrap.dataset.isVideo === 'true';
+    const filename = wrap.dataset.filename || 'Imagen';
+    const dl = wrap.dataset.dl || '';
+    
+    document.getElementById('imageModalTitle').textContent = filename;
+    document.getElementById('imageDownloadBtn').href = dl;
+    const content = document.getElementById('imageModalContent');
+    
+    if (isVideo) {
+        const video = wrap.querySelector('video');
+        const src = video ? video.src : '';
+        content.innerHTML = '<video src="' + src + '" controls autoplay muted style="max-width:100%;max-height:80vh;border-radius:12px;display:block;margin:0 auto;"></video>';
+    } else {
+        const img = wrap.querySelector('img');
+        const src = (img && img.dataset.full) ? img.dataset.full : (img ? img.src : '');
+        content.innerHTML = '<img src="' + src + '" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:12px;display:block;margin:0 auto;" alt="' + filename + '">';
+    }
+    
+    if (!imageModal) {
+        imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+    }
+    imageModal.show();
 }
 
-function toggleFavoriteModal() {
-    if (!window._modalImageId) return;
-    const favBtn = document.getElementById('modalFavBtn');
-    fetch('/img/' + window._modalImageId + '/favorite', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            window._modalIsFav = data.favorited;
-            if (favBtn) {
-                favBtn.querySelector('i').className = data.favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
-                favBtn.style.color = data.favorited ? '#ff4d8d' : 'white';
-            }
-            // Sincronizar con el botón del grid si existe
-            const gridBtn = document.querySelector('[data-image-id="' + window._modalImageId + '"] .heart-btn');
-            if (gridBtn) {
-                gridBtn.querySelector('i').className = data.favorited ? 'bi bi-heart-fill' : 'bi bi-heart';
-                gridBtn.style.color = data.favorited ? '#ff4d8d' : 'white';
-            }
-        });
-}
+// Sistema de favoritos eliminado
 
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -412,14 +389,17 @@ function loadPage(page) {
                 const item = document.createElement('div');
                 item.className = 'pinterest-item';
                 item.dataset.imageId = img.id;
+                item.dataset.filename = img.filename;
+                item.dataset.dl = img.download_url;
+                item.dataset.isVideo = img.is_video ? 'true' : 'false';
                 
                 const favBtn = document.createElement('button');
                 favBtn.className = 'heart-btn';
                 favBtn.onclick = function(e) {
                     e.stopPropagation();
-                    toggleFavorite(img.id, this);
+                    showFavoritesRemovedModal();
                 };
-                favBtn.title = 'Guardar en favoritos';
+                favBtn.title = 'Sistema de favoritos eliminado';
                 favBtn.innerHTML = '<i class="bi bi-heart"></i>';
                 
                 const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';

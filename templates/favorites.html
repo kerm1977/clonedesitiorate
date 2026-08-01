@@ -24,9 +24,11 @@
                        muted
                        loop></video>
                 {% else %}
-                <img src="{{ url_for('game.serve_image', image_id=img.id) }}"
+                <img src="{{ url_for('game.serve_thumbnail', image_id=img.id) }}"
                      alt="{{ img.filename }}"
-                     class="fav-img">
+                     class="fav-img"
+                     loading="lazy"
+                     decoding="async">
                 {% endif %}
                 <div class="fav-zoom-hint">🔍</div>
             </div>

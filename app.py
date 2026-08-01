@@ -52,14 +52,8 @@ def create_app():
                 return c.value if c else d
             except Exception:
                 return d
-        try:
-            uid = get_session_id()
-            fav_count = Favorite.query.filter_by(user_session=uid).count()
-        except Exception:
-            fav_count = 0
         return {
             'about': AboutContent.query.first(),
-            'favorites_count': fav_count,
             'nita_report_enabled': _cfg('nita_report_enabled', '0') == '1',
             'nita_report_title': _cfg('nita_report_title', '¡Gracias por reportar! 🚩'),
             'nita_report_emoji': _cfg('nita_report_emoji', '🚩'),
@@ -90,6 +84,7 @@ def create_app():
     from routes.push_notifications import push_bp
     from routes.game_chat import game_chat_bp
     from routes.coleccion import coleccion_bp
+    from routes.nita_upload import nita_upload_bp
 
     app.register_blueprint(game_bp)
     app.register_blueprint(auth_bp)
@@ -103,6 +98,7 @@ def create_app():
     app.register_blueprint(admin_feedback_bp)
     app.register_blueprint(push_bp)
     app.register_blueprint(coleccion_bp)
+    app.register_blueprint(nita_upload_bp)
     app.config.setdefault('MAX_CONTENT_LENGTH', 100 * 1024 * 1024)
 
     from chat_socket import register_socket_events
