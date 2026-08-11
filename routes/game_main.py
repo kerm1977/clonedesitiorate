@@ -47,33 +47,27 @@ def register_game_routes(bp):
         unread_count = 0
         weekly_comments_count = 0
         if current_user.username == 'nitalaosita':
+            # Cargar en una sola consulta todos los comentarios ya leídos por nitalaosita
+            reads = {
+                (r.comment_type, r.comment_id)
+                for r in CommentRead.query.filter_by(user_id=current_user.id).all()
+            }
+
             # Comentarios de historias de semana no leídos
             weekly_comments = WeeklyStoryComment.query.all()
             weekly_comments_count = len(weekly_comments)
             for comment in weekly_comments:
-                if not CommentRead.query.filter_by(
-                    user_id=current_user.id,
-                    comment_type='weekly',
-                    comment_id=comment.id
-                ).first():
+                if ('weekly', comment.id) not in reads:
                     unread_count += 1
             # Comentarios de historias de usuario no leídos
             story_comments = StoryComment.query.all()
             for comment in story_comments:
-                if not CommentRead.query.filter_by(
-                    user_id=current_user.id,
-                    comment_type='story',
-                    comment_id=comment.id
-                ).first():
+                if ('story', comment.id) not in reads:
                     unread_count += 1
             # Comentarios de imágenes no leídos
             image_comments = ImageComment.query.all()
             for comment in image_comments:
-                if not CommentRead.query.filter_by(
-                    user_id=current_user.id,
-                    comment_type='image',
-                    comment_id=comment.id
-                ).first():
+                if ('image', comment.id) not in reads:
                     unread_count += 1
         
         return _set_no_cache(make_response(render_template('index.html', images=images.items,

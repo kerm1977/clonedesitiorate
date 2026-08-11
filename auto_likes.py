@@ -33,16 +33,20 @@ def _auto_like_loop():
 
         try:
             with _app.app_context():
-                # Solo comentarios que aún no llegaron al máximo
-                candidates = WeeklyStoryComment.query.filter(
+                base_query = WeeklyStoryComment.query.filter(
                     WeeklyStoryComment.likes_count < MAX_LIKES_PER_COMMENT
-                ).all()
+                )
 
-                if not candidates:
+                count = base_query.count()
+                if count == 0:
                     # Todos llegaron a 1000 — detener
                     break
 
-                comment = random.choice(candidates)
+                offset = random.randint(0, count - 1)
+                comment = base_query.offset(offset).first()
+                if not comment:
+                    continue
+
                 comment.likes_count = (comment.likes_count or 0) + 1
                 new_count = comment.likes_count
                 comment_id = comment.id

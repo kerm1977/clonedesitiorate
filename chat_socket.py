@@ -5,6 +5,46 @@ from models import db, ChatMessage, User
 from datetime import datetime
 import threading
 
+
+def _send_chat_push_async(app, username, sender_display, content, chat_type):
+    """Enviar push de chat en segundo plano para no bloquear el socket."""
+    try:
+        with app.app_context():
+            from models import PushSubscription
+            from push_helper import send_push_notification
+            import json
+            import os
+
+            subs = PushSubscription.query.filter_by(username=username).all()
+            if not subs:
+                return
+
+            vapid_file = 'vapid_keys.json'
+            if not os.path.exists(vapid_file):
+                return
+
+            with open(vapid_file, 'r') as f:
+                keys = json.load(f)
+
+            title = '💬 Nuevo mensaje'
+            body = f'{sender_display}: {content[:100]}...' if len(content) > 100 else f'{sender_display}: {content}'
+            payload = json.dumps({
+                'type': 'chat',
+                'title': title,
+                'body': body,
+                'sender': sender_display,
+                'chat_type': chat_type
+            })
+
+            for sub in subs:
+                try:
+                    send_push_notification(sub, payload, keys['private_key'])
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
 # {username: sid}
 _user_sids = {}
 
@@ -191,20 +231,23 @@ def register_socket_events(socketio):
                     # nitalaosita envía a las moderadoras
                     from models import User
                     moderators = User.query.filter(User.email.in_(['bolita@mummy.com', 'doll@mummy.com'])).all()
+                    app = current_app._get_current_object()
                     for mod in moderators:
                         if mod.username not in _user_sids:
-                            send_chat_push(mod.username, sender_display, content, 'moderator')
+                            socketio.start_background_task(_send_chat_push_async, app, mod.username, sender_display, content, 'moderator')
                 else:
                     # Moderadora envía a nitalaosita
                     if 'nitalaosita' not in _user_sids:
-                        send_chat_push('nitalaosita', sender_display, content, 'moderator')
+                        app = current_app._get_current_object()
+                        socketio.start_background_task(_send_chat_push_async, app, 'nitalaosita', sender_display, content, 'moderator')
             else:
                 # Chat normal
                 if partner in _user_sids:
                     emit('new_message', payload, to=room)
                     emit('new_message', payload, to=f'user_{partner}')
                 else:
-                    send_chat_push(partner, sender_display, content, 'private')
+                    app = current_app._get_current_object()
+                    socketio.start_background_task(_send_chat_push_async, app, partner, sender_display, content, 'private')
             
             # Notificaciones especiales para nitalaosita
             if current_user.is_superuser and partner == 'nitalaosita':

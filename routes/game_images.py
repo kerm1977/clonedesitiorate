@@ -4,9 +4,17 @@ from models import db, Image
 import os
 import io
 import mimetypes
+import hashlib
 from PIL import Image as PILImage
 
 DISK_SEARCH_FOLDER = r'D:\Nueva carpeta'
+THUMB_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'cache', 'game_thumbs')
+
+
+def _get_game_thumb_path(filepath):
+    os.makedirs(THUMB_CACHE_DIR, exist_ok=True)
+    h = hashlib.md5(filepath.encode('utf-8')).hexdigest() + '.webp'
+    return os.path.join(THUMB_CACHE_DIR, h)
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif'}
 VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
 
@@ -37,18 +45,21 @@ def register_game_images_routes(bp):
         img = Image.query.get_or_404(image_id)
         if img.is_video or not os.path.exists(img.filepath):
             return "No disponible", 404
-        
+
+        cache_path = _get_game_thumb_path(img.filepath)
+        if os.path.exists(cache_path):
+            response = send_file(cache_path, mimetype='image/webp', conditional=True)
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
+
         try:
             thumb_size = (240, 240)
             pil_img = PILImage.open(img.filepath)
             pil_img = pil_img.convert('RGB')
             pil_img.thumbnail(thumb_size, PILImage.LANCZOS)
-            
-            buf = io.BytesIO()
-            pil_img.save(buf, format='WEBP', quality=35, optimize=True, method=0)
-            buf.seek(0)
-            
-            response = send_file(buf, mimetype='image/webp')
+            pil_img.save(cache_path, format='WEBP', quality=35, optimize=True, method=0)
+
+            response = send_file(cache_path, mimetype='image/webp', conditional=True)
             response.headers['Cache-Control'] = 'public, max-age=604800'
             return response
         except Exception:

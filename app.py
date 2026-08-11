@@ -33,8 +33,12 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading', 
-                     ping_timeout=60, ping_interval=25)
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading',
+                      ping_timeout=60, ping_interval=25)
+
+    @app.teardown_appcontext
+    def _close_db(exc):
+        db.session.remove()
 
     login_manager = LoginManager(app)
     login_manager.login_view = 'auth.login'
@@ -127,6 +131,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _set_sqlite_pragmas()
         _run_migrations()
 
     # Iniciar auto-likes en background
@@ -148,6 +153,15 @@ def _run_migrations():
         "ALTER TABLE push_subscription ADD COLUMN username VARCHAR(100)",
         "ALTER TABLE image_comment ADD COLUMN likes_count INTEGER DEFAULT 0",
     ]
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_chat_message_sender_name ON chat_message(sender_name)",
+        "CREATE INDEX IF NOT EXISTS idx_chat_message_receiver_name ON chat_message(receiver_name)",
+        "CREATE INDEX IF NOT EXISTS idx_chat_message_chat_type ON chat_message(chat_type)",
+        "CREATE INDEX IF NOT EXISTS idx_chat_message_is_read ON chat_message(is_read)",
+        "CREATE INDEX IF NOT EXISTS idx_chat_message_created_at ON chat_message(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_comment_read_user ON comment_read(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_comment_read_lookup ON comment_read(user_id, comment_type, comment_id)",
+    ]
     with db.engine.connect() as conn:
         for sql in cols:
             try:
@@ -155,6 +169,25 @@ def _run_migrations():
                 conn.commit()
             except Exception:
                 pass
+        for sql in indexes:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                pass
+
+
+def _set_sqlite_pragmas():
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA synchronous=NORMAL"))
+            conn.execute(text("PRAGMA cache_size=-64000"))
+            conn.execute(text("PRAGMA temp_store=MEMORY"))
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
+        except Exception:
+            pass
 
 
 app = create_app()
@@ -189,4 +222,5 @@ if __name__ == '__main__':
     print(f'SSL local desactivado. Tailscale Funnel proporciona HTTPS.')
     print(f'Corriendo en puerto: {port}')
     
-    socketio.run(app, debug=True, host='0.0.0.0', port=port, ssl_context=ssl_context, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=False, use_reloader=False, host='0.0.0.0', port=port,
+                 ssl_context=ssl_context, allow_unsafe_werkzeug=True)

@@ -111,17 +111,22 @@ def register_game_chat_routes(bp):
         elif messages:
             display_name = messages[0].chat_display_name
         
+        # Cargar todos los remitentes de una vez para evitar consultas N+1
+        sender_ids = [m.sender_id for m in messages if m.sender_id]
+        senders = {}
+        if sender_ids:
+            senders = {u.id: u for u in User.query.filter(User.id.in_(sender_ids)).all()}
+
         messages_data = []
         for m in messages:
             is_me = (m.sender_name == current_name) or (m.sender_id == current_user.id if current_user.is_authenticated else False)
-            
+
             # Obtener alias del remitente si existe
             sender_alias = None
-            if m.sender_id:
-                sender = User.query.get(m.sender_id)
-                if sender and sender.chat_alias:
-                    sender_alias = sender.chat_alias
-            
+            sender = senders.get(m.sender_id) if m.sender_id else None
+            if sender and sender.chat_alias:
+                sender_alias = sender.chat_alias
+
             # Determinar el nombre a mostrar
             if display_name and not is_me:
                 display_sender_name = display_name
