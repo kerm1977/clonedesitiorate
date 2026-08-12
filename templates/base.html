@@ -390,13 +390,6 @@
     🛡️
 </button>
 
-<!-- Botón flotante Galería (Nitalaosita) -->
-<button onclick="window.location.href='{{ url_for('game.index') }}'" title="Galería"
-    style="position:fixed;bottom:82px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
-           background:linear-gradient(135deg,#2196f3,#0d47a1);border:none;color:#fff;font-size:1.4rem;
-           box-shadow:0 4px 16px rgba(33,150,243,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-    📷
-</button>
 {% endif %}
 
 {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
