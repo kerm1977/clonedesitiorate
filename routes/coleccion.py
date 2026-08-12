@@ -135,6 +135,7 @@ def index():
             f['view_url'] = url_for('game.serve_image', image_id=f['game_id'])
             f['low_url'] = url_for('game.serve_low_image', image_id=f['game_id']) if not f['is_video'] else None
             f['download_url'] = url_for('game.download_image', image_id=f['game_id'])
+            f['share_url'] = url_for('game.download_image', image_id=f['game_id'], _external=True)
         else:
             full_path = os.path.join(COLECCION_FOLDER, f['name'])
             if f['type'] == 'video':
@@ -147,6 +148,7 @@ def index():
             f['view_url'] = url_for('coleccion.serve_file', filename=f['name'])
             f['low_url'] = url_for('coleccion.serve_low', filename=f['name']) if f['type'] == 'image' else None
             f['download_url'] = url_for('coleccion.serve_file', filename=f['name'], download='1')
+            f['share_url'] = url_for('coleccion.serve_file', filename=f['name'], download='1', _external=True)
 
         all_opinions = CollectionOpinion.query.filter_by(filename=f['name']).order_by(CollectionOpinion.created_at.desc()).all()
         if f.get('from_game'):
@@ -229,12 +231,18 @@ def delete_opinion(opinion_id):
 @login_required
 def serve_file(filename):
     full_path = os.path.join(COLECCION_FOLDER, filename)
-    if not _is_safe_path(COLECCION_FOLDER, full_path) or not os.path.isfile(full_path):
-        abort(404)
-    mtype = mimetypes.guess_type(full_path)[0] or 'application/octet-stream'
-    if request.args.get('download'):
-        return send_file(full_path, mimetype=mtype, as_attachment=True, conditional=True)
-    return send_file(full_path, mimetype=mtype, conditional=True)
+    if _is_safe_path(COLECCION_FOLDER, full_path) and os.path.isfile(full_path):
+        mtype = mimetypes.guess_type(full_path)[0] or 'application/octet-stream'
+        if request.args.get('download'):
+            return send_file(full_path, mimetype=mtype, as_attachment=True, conditional=True)
+        return send_file(full_path, mimetype=mtype, conditional=True)
+    # Fallback a archivos de la galería
+    img = Image.query.filter_by(filename=filename).first()
+    if img and os.path.isfile(img.filepath):
+        if request.args.get('download'):
+            return redirect(url_for('game.download_image', image_id=img.id))
+        return redirect(url_for('game.serve_image', image_id=img.id))
+    abort(404)
 
 
 @coleccion_bp.route('/low/<path:filename>')

@@ -25,7 +25,7 @@
         <div class="col-6 col-md-4 col-lg-3">
             <div class="card border-0 shadow-sm h-100" style="border-radius:16px; overflow:hidden; position:relative;">
                 {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
-                <a href="{{ url_for('coleccion.serve_file', filename=f.name, download='1') }}" download
+                <a href="{{ f.download_url }}" download
                    style="position:absolute; top:8px; right:8px; z-index:10; width:36px; height:36px; border-radius:50%;
                           background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
                           display:flex; align-items:center; justify-content:center; color:#dc3545; font-size:1.1rem; text-decoration:none;"
@@ -34,14 +34,14 @@
                 </a>
                 {% endif %}
                 {% if f.type == 'video' and f.playable %}
-                <div class="w-100 video-lazy" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}"
+                <div class="w-100 video-lazy" data-src="{{ f.download_url }}"
                      style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
                      onclick="downloadVideo(this)">
                     <button type="button" class="btn btn-sm position-absolute" title="Copiar enlace"
                         style="top:8px; left:8px; z-index:10; width:36px; height:36px; border-radius:50%;
                                background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
                                display:flex; align-items:center; justify-content:center; color:#0d47a1; font-size:1rem; border:none;"
-                        onclick="event.stopPropagation(); copyColeccionLink('{{ url_for('coleccion.serve_file', filename=f.name, _external=True) }}')">
+                        onclick="event.stopPropagation(); copyColeccionLink('{{ f.share_url }}')">
                         <i class="bi bi-share"></i>
                     </button>
                     {% if f.thumb %}
@@ -54,13 +54,13 @@
                     <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">⬇</div>
                 </div>
                 {% elif f.type == 'video' %}
-                <div class="w-100" data-src="{{ url_for('coleccion.serve_file', filename=f.name) }}" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
+                <div class="w-100" data-src="{{ f.download_url }}" style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
                      onclick="downloadVideo(this)">
                     <button type="button" class="btn btn-sm position-absolute" title="Copiar enlace"
                         style="top:8px; left:8px; z-index:10; width:36px; height:36px; border-radius:50%;
                                background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
                                display:flex; align-items:center; justify-content:center; color:#0d47a1; font-size:1rem; border:none;"
-                        onclick="event.stopPropagation(); copyColeccionLink('{{ url_for('coleccion.serve_file', filename=f.name, _external=True) }}')">
+                        onclick="event.stopPropagation(); copyColeccionLink('{{ f.share_url }}')">
                         <i class="bi bi-share"></i>
                     </button>
                     {% if f.thumb %}
