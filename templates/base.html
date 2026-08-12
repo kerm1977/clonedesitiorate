@@ -787,7 +787,8 @@ function addNitaActivity(data) {
         document.body.appendChild(el);
     }
     const body = document.getElementById('nitaActivityBody');
-    if (body) body.innerHTML = (data.icon ? data.icon + ' ' : '') + (data.text || '');
+    const timeHtml = data.time ? '<div style="font-size:0.75rem;opacity:0.85;">' + data.time + '</div>' : '';
+    if (body) body.innerHTML = (data.icon ? data.icon + ' ' : '') + (data.text || '') + timeHtml;
     const toast = bootstrap.Toast.getOrCreateInstance(el, { delay: 5000 });
     toast.show();
     if (data.type === 'disconnect') {
@@ -985,8 +986,8 @@ function initSocket() {
     socket.on('nita_activity', data => {
         addNitaActivity(data);
     });
-    socket.on('nita_disconnected', () => {
-        addNitaActivity({ icon: '🔴', text: 'Se desconectó', type: 'disconnect', link: null });
+    socket.on('nita_disconnected', data => {
+        addNitaActivity({ icon: '🔴', text: 'Se desconectó', type: 'disconnect', link: null, time: data.time });
     });
     {% endif %}
 

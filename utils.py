@@ -1,6 +1,7 @@
 import os
 import uuid
 import re
+from datetime import datetime, timezone, timedelta
 from flask import session
 from models import db, Image
 
@@ -63,3 +64,12 @@ def scan_all_sources():
         if err:
             errors.append(f'{src.name}: {err}')
     return total, ('; '.join(errors) if errors else None)
+
+
+def costa_rica_now():
+    """Hora actual en Costa Rica / Centroamérica (UTC-6, sin horario de verano)."""
+    return datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=-6)))
+
+
+def costa_rica_now_str(fmt='%I:%M %p'):
+    return costa_rica_now().strftime(fmt)

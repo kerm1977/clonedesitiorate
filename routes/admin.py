@@ -207,22 +207,24 @@ def update_community_message():
 @admin_bp.route('/notifications')
 @login_required
 def get_notifications():
-    if _guard():
+    if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
         return jsonify(error='No autorizado'), 403
     notifications = Notification.query.order_by(Notification.created_at.desc()).limit(10).all()
+    def _cr(dt):
+        return (dt - timedelta(hours=6)).strftime('%d/%m/%Y %I:%M %p') if dt else ''
     return jsonify([{
         'id': n.id,
         'message': n.message,
         'type': n.notification_type,
         'read': n.read,
-        'created_at': n.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        'created_at': _cr(n.created_at)
     } for n in notifications])
 
 
 @admin_bp.route('/notifications/<int:notification_id>/read', methods=['POST'])
 @login_required
 def mark_notification_read(notification_id):
-    if _guard():
+    if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
         return jsonify(error='No autorizado'), 403
     notification = Notification.query.get_or_404(notification_id)
     notification.read = True

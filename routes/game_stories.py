@@ -2,7 +2,7 @@ from flask import request, jsonify, render_template, session, Response
 from flask_login import current_user, login_required
 from models import db, Story, WeeklyStory, WeeklyStoryComment, StoryComment, CommentRead, CommentLike, ImageComment
 from datetime import datetime
-from utils import get_session_id
+from utils import get_session_id, costa_rica_now_str
 import re
 
 _socketio = None
@@ -215,7 +215,8 @@ def register_game_stories_routes(bp):
                     'type': 'comment',
                     'icon': '💬',
                     'text': f'Comentó en la historia: "{content[:50]}{"..." if len(content) > 50 else ""}"',
-                    'link': '/weekly-story#comentarios'
+                    'link': '/weekly-story#comentarios',
+                    'time': costa_rica_now_str()
                 })
             
             return jsonify({'success': True})
@@ -318,7 +319,8 @@ def register_game_stories_routes(bp):
                     'type': 'like',
                     'icon': '❤️',
                     'text': 'Dio like a un comentario',
-                    'link': '/weekly-story#comentarios'
+                    'link': '/weekly-story#comentarios',
+                    'time': costa_rica_now_str()
                 })
             
             return jsonify({

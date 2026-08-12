@@ -2,6 +2,7 @@ from flask import request, current_app
 from flask_login import current_user
 from flask_socketio import emit, join_room, leave_room
 from models import db, ChatMessage, User
+from utils import costa_rica_now_str
 from datetime import datetime
 import threading
 
@@ -82,7 +83,8 @@ def register_socket_events(socketio):
                     'type': 'connect',
                     'icon': '🟢',
                     'text': 'Se conectó',
-                    'link': None
+                    'link': None,
+                    'time': costa_rica_now_str()
                 }, broadcast=True)
                 emit('user_online', {'username': current_user.username}, broadcast=True)
                 emit('online_list', {'online': list(_user_sids.keys())}, to=request.sid)
@@ -117,12 +119,13 @@ def register_socket_events(socketio):
                             else:
                                 # Ya se reconectó con otro sid
                                 return
-                        socketio.emit('nita_disconnected', {})
+                        socketio.emit('nita_disconnected', {'time': costa_rica_now_str()})
                         socketio.emit('nita_activity', {
                             'type': 'disconnect',
                             'icon': '🔴',
                             'text': 'Se desconectó',
-                            'link': None
+                            'link': None,
+                            'time': costa_rica_now_str()
                         })
                         socketio.emit('user_offline', {'username': username})
 
@@ -262,7 +265,8 @@ def register_socket_events(socketio):
                     'type': 'chat',
                     'icon': '📱',
                     'text': f'Envió un mensaje de chat: "{content[:40]}{"..." if len(content) > 40 else ""}"',
-                    'link': None
+                    'link': None,
+                    'time': costa_rica_now_str()
                 }, broadcast=True)
         except Exception as e:
             db.session.rollback()

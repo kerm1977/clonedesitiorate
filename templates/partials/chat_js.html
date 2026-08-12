@@ -64,7 +64,7 @@ function addNitaActivity(data) {
     const empty = document.getElementById('nitaEmptyState');
     if (empty) empty.remove();
 
-    const now  = new Date().toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit'});
+    const now  = data.time || new Date().toLocaleTimeString('es-CR', {timeZone:'America/Costa_Rica', hour:'2-digit', minute:'2-digit'});
     const item = document.createElement('div');
     item.style.cssText = 'padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start;';
     item.innerHTML = `
