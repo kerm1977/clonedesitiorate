@@ -270,25 +270,28 @@ def register_socket_events(socketio):
 
     @socketio.on('message_received')
     def on_message_received(data):
-        """nitalaosita notifica que recibió el mensaje — reenviar al sender"""
+        """Receptor notifica que recibió el mensaje — reenviar al sender"""
         if not current_user.is_authenticated:
             return
-        msg_id   = data.get('msg_id')
-        sender   = data.get('sender')
+        msg_id = data.get('msg_id')
+        sender = data.get('sender')
         if not msg_id or not sender:
             return
-        sender_sid = _user_sids.get(sender)
-        if sender_sid:
-            emit('message_status', {'msg_id': msg_id, 'status': 'received'}, to=sender_sid)
+        # Usar la sala personal del remitente en lugar de su SID, más robusto ante reconexiones
+        emit('message_status', {'msg_id': msg_id, 'status': 'received'}, to=f'user_{sender}')
 
     @socketio.on('typing')
     def on_typing(data):
         if not current_user.is_authenticated:
             return
         partner = data.get('partner')
+        chat_type = data.get('chat_type', 'private')
         if not partner:
             return
-        room = get_chat_room(current_user.username, partner)
+        if chat_type == 'moderator':
+            room = get_moderator_room()
+        else:
+            room = get_chat_room(current_user.username, partner)
         display = get_display_name(current_user)
         emit('user_typing', {'username': current_user.username, 'display': display}, to=room, include_self=False)
 
@@ -297,9 +300,13 @@ def register_socket_events(socketio):
         if not current_user.is_authenticated:
             return
         partner = data.get('partner')
+        chat_type = data.get('chat_type', 'private')
         if not partner:
             return
-        room = get_chat_room(current_user.username, partner)
+        if chat_type == 'moderator':
+            room = get_moderator_room()
+        else:
+            room = get_chat_room(current_user.username, partner)
         emit('user_stop_typing', {'username': current_user.username}, to=room, include_self=False)
 
     @socketio.on('get_online')

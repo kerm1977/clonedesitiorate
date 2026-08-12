@@ -1069,7 +1069,7 @@ function initSocket() {
         if (chatIsActive && shouldShow) {
             console.log('Appending message in real-time');
             appendMessage(msg.display_sender || msg.sender, msg.content, false, msg.time, msg.image_path, msg.id);
-            fetch('/chat/mark-read/' + encodeURIComponent(currentChatPartner), { method: 'POST' }).catch(() => {});
+            fetch('/chat/mark-read/' + encodeURIComponent(msg.sender) + '?chat_type=' + currentChatType, { method: 'POST' }).catch(() => {});
         } else {
             // Chat no abierto o mensaje de otro interlocutor → solo badge
             console.log('Not showing message - chat not active or shouldShow false');
@@ -1080,9 +1080,16 @@ function initSocket() {
     });
 
     socket.on('message_status', data => {
+        const el = document.querySelector(`.chat-message[data-msg-id="${data.msg_id}"] .msg-status`);
+        if (!el) return;
         if (data.status === 'received') {
-            const el = document.querySelector(`.chat-message[data-msg-id="${data.msg_id}"] .msg-status`);
-            if (el) { el.textContent = '✓✓'; el.style.color = '#4fc3f7'; el.title = 'Recibido'; }
+            el.textContent = '✓✓';
+            el.style.color = '#b0b0b0';
+            el.title = 'Recibido';
+        } else if (data.status === 'read') {
+            el.textContent = '✓✓';
+            el.style.color = '#4fc3f7';
+            el.title = 'Leído';
         }
     });
 
@@ -1319,7 +1326,7 @@ function openChat(username) {
     }
 
     // Marcar leídos
-    fetch('/chat/mark-read/' + encodeURIComponent(username), { method: 'POST' })
+    fetch('/chat/mark-read/' + encodeURIComponent(username) + '?chat_type=' + currentChatType, { method: 'POST' })
         .then(() => updateUnreadBadge());
 }
 
@@ -1362,7 +1369,7 @@ function openMaskedChat(displayName, realUsername) {
     }
 
     // Marcar leídos
-    fetch('/chat/mark-read/' + encodeURIComponent(realUsername), { method: 'POST' })
+    fetch('/chat/mark-read/' + encodeURIComponent(realUsername) + '?chat_type=' + currentChatType, { method: 'POST' })
         .then(() => updateUnreadBadge());
     
     // Limpiar el input
@@ -1563,7 +1570,7 @@ function sendChatMessage() {
     input.value = '';
 
     // Detener typing
-    socket.emit('stop_typing', { partner: currentChatPartner });
+    socket.emit('stop_typing', { partner: currentChatPartner, chat_type: currentChatType });
     clearTimeout(typingTimer);
     const indicator = document.getElementById('chatTypingIndicator');
     if (indicator) indicator.style.display = 'none';
@@ -1571,10 +1578,10 @@ function sendChatMessage() {
 
 function onChatInputTyping() {
     if (!socket || !currentChatPartner) return;
-    socket.emit('typing', { partner: currentChatPartner });
+    socket.emit('typing', { partner: currentChatPartner, chat_type: currentChatType });
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
-        socket.emit('stop_typing', { partner: currentChatPartner });
+        socket.emit('stop_typing', { partner: currentChatPartner, chat_type: currentChatType });
     }, 3000);
 }
 

@@ -846,31 +846,50 @@ def register_game_chat_routes(bp):
     @login_required
     def mark_chat_read(username):
         current_name = current_user.username if current_user.is_authenticated else None
+        chat_type = request.args.get('chat_type', 'private')
         
-        # Lógica especial para nitalaosita
-        if current_name == 'nitalaosita':
-            # Marcar como leídos los mensajes de superusuarios
-            superusers = User.query.filter_by(is_superuser=True).all()
-            superuser_ids = [su.id for su in superusers]
-            
-            ChatMessage.query.filter(
-                db.and_(
-                    ChatMessage.receiver_name == 'nitalaosita',
-                    ChatMessage.sender_id.in_(superuser_ids),
-                    ChatMessage.is_read == False
-                )
-            ).update({'is_read': True})
+        if chat_type == 'moderator':
+            if current_name == 'nitalaosita' and username == 'nitalaosita':
+                # nitalaosita leyendo mensajes de las moderadoras
+                messages = ChatMessage.query.filter(
+                    db.and_(
+                        ChatMessage.chat_type == 'moderator',
+                        ChatMessage.receiver_name == 'nitalaosita',
+                        ChatMessage.sender_name != 'nitalaosita',
+                        ChatMessage.is_read == False
+                    )
+                ).all()
+            else:
+                # Moderadora leyendo mensajes de nitalaosita
+                messages = ChatMessage.query.filter(
+                    db.and_(
+                        ChatMessage.chat_type == 'moderator',
+                        ChatMessage.sender_name == 'nitalaosita',
+                        ChatMessage.is_read == False
+                    )
+                ).all()
         else:
-            # Para otros usuarios, marcar como leídos los mensajes del chat
-            ChatMessage.query.filter(
+            # Chat privado: marcar mensajes recibidos del partner
+            messages = ChatMessage.query.filter(
                 db.and_(
-                    db.or_(
-                        ChatMessage.receiver_name == username,
-                        ChatMessage.sender_name == username
-                    ),
+                    ChatMessage.chat_type == 'private',
+                    ChatMessage.sender_name == username,
+                    ChatMessage.receiver_name == current_name,
                     ChatMessage.is_read == False
                 )
-            ).update({'is_read': True})
+            ).all()
+        
+        sender_messages = {}
+        for msg in messages:
+            msg.is_read = True
+            sender_messages.setdefault(msg.sender_name, []).append(msg.id)
         
         db.session.commit()
-        return jsonify(success=True)
+        
+        # Notificar a cada remitente que sus mensajes fueron leídos
+        if _socketio:
+            for sender, ids in sender_messages.items():
+                for msg_id in ids:
+                    _socketio.emit('message_status', {'msg_id': msg_id, 'status': 'read'}, to=f'user_{sender}')
+        
+        return jsonify(success=True, marked=len(messages))
