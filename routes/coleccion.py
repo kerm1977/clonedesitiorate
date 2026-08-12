@@ -2,6 +2,7 @@ import os
 import io
 import mimetypes
 import hashlib
+import random
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, CollectionOpinion, User, Image
@@ -137,7 +138,10 @@ def index():
         else:
             full_path = os.path.join(COLECCION_FOLDER, f['name'])
             if f['type'] == 'video':
-                f['thumb'] = _get_video_thumb(f['name'], full_path)
+                if _get_video_thumb(f['name'], full_path):
+                    f['thumb'] = url_for('coleccion.serve_thumb', filename=f['name'])
+                else:
+                    f['thumb'] = None
             else:
                 f['thumb'] = None
             f['view_url'] = url_for('coleccion.serve_file', filename=f['name'])
@@ -156,7 +160,7 @@ def index():
 
     page = request.args.get('page', 1, type=int)
     per_page = 15
-    files.sort(key=lambda x: x['name'].lower())
+    random.shuffle(files)
     total = len(files)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
