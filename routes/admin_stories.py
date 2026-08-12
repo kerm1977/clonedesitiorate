@@ -1,6 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from models import db, Story, WeeklyStory, StoryComment
+from utils import log_activity
 from datetime import datetime, timedelta
 
 def register_admin_stories_routes(bp):
@@ -72,6 +73,11 @@ def register_admin_stories_routes(bp):
             )
             db.session.add(comment)
             db.session.commit()
+            
+            log_activity(username, 'comment', 'story_comment', story.title or 'Historia',
+                         object_url='/admin/stories',
+                         object_id=comment.id,
+                         extra=content)
             
             return jsonify({'success': True})
         except Exception as e:

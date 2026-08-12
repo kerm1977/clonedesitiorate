@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
-from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite
+from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog
 from datetime import datetime, timedelta
 import json
 import os
@@ -555,3 +555,39 @@ def api_settings():
             'chat_info': chat_info_config.value if chat_info_config else 'Este es un chat exclusivo e independiente para un grupo muy selecto de Pedófilas mujeres. No chateamos en grupo por la alta probabilidad de ser evidenciadas. Las personas aqui en este chat se llaman con @antes del nombre La Moderadora de esta sección es @Sorane cualquier pregunta a ella',
             'show_chat_info': show_chat_info_config.value == 'true' if show_chat_info_config else True
         })
+
+@admin_bp.route('/nita-activity')
+@login_required
+def nita_activity_history():
+    if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
+        return redirect(url_for('game.index'))
+    from utils import costa_rica_str
+    logs = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita'))).order_by(ActivityLog.created_at.desc()).limit(200).all()
+    entries = []
+    for log in logs:
+        cr = costa_rica_str(log.created_at)
+        parts = cr.split(' ')
+        day = parts[0] if parts else ''
+        time = parts[1] + ' ' + parts[2] if len(parts) >= 3 else cr
+        if log.action == 'download':
+            icon = '⬇️'
+            label = 'Descargó'
+        elif log.action == 'view':
+            icon = '👁️'
+            label = 'Vio'
+        elif log.action == 'comment':
+            icon = '💬'
+            label = 'Comentó'
+        else:
+            icon = '📌'
+            label = log.action.capitalize()
+        entries.append({
+            'icon': icon,
+            'label': label,
+            'name': log.object_name,
+            'url': log.object_url or '#',
+            'day': day,
+            'time': time,
+            'extra': log.extra or ''
+        })
+    return render_template('nita_activity.html', entries=entries)

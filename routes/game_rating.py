@@ -1,6 +1,6 @@
 from flask import request, jsonify, url_for
 from models import db, Message, Favorite, ImageQuestion, ImageQuestionResponse, ScheduledUserMessage, Image, ImageComment, DeletedImage, CommentLike
-from utils import get_session_id
+from utils import get_session_id, log_activity
 from datetime import datetime
 from flask_login import current_user, login_required
 
@@ -78,6 +78,13 @@ def register_game_rating_routes(bp):
         )
         db.session.add(comment)
         db.session.commit()
+        
+        img = Image.query.get(image_id)
+        if img:
+            log_activity(username, 'comment', 'image_comment', img.filename,
+                         object_url=url_for('game.view_image', image_id=image_id),
+                         object_id=comment.id,
+                         extra=content)
         
         return jsonify({
             'success': True,

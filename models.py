@@ -224,3 +224,14 @@ class DeletedImage(db.Model):
     deleted_by_user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True)
     deleted_at=db.Column(db.DateTime,default=datetime.utcnow)
     deleted_by=db.relationship('User',backref='deleted_images')
+
+class ActivityLog(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    username=db.Column(db.String(80),nullable=False,index=True)
+    action=db.Column(db.String(50),nullable=False)  # download, view, comment, like
+    object_type=db.Column(db.String(50),nullable=False)  # image, collection_file, weekly_comment, image_comment, story_comment
+    object_id=db.Column(db.String(100),nullable=True)
+    object_name=db.Column(db.String(255),nullable=False)
+    object_url=db.Column(db.String(500),nullable=True)
+    extra=db.Column(db.Text,nullable=True)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)

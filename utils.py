@@ -3,7 +3,7 @@ import uuid
 import re
 from datetime import datetime, timezone, timedelta
 from flask import session
-from models import db, Image
+from models import db, Image, ActivityLog
 
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.mp4', '.webm', '.mov', '.avi', '.mkv'}
 
@@ -73,3 +73,30 @@ def costa_rica_now():
 
 def costa_rica_now_str(fmt='%I:%M %p'):
     return costa_rica_now().strftime(fmt)
+
+
+def costa_rica_str(dt, fmt='%d/%m/%Y %I:%M %p'):
+    """Convierte una fecha UTC almacenada a hora de Costa Rica (UTC-6)."""
+    if not dt:
+        return ''
+    return (dt - timedelta(hours=6)).strftime(fmt)
+
+
+NITA_USERNAMES = {'nitalaosita', 'nita', 'lausita'}
+
+
+def log_activity(username, action, object_type, object_name, object_url=None, object_id=None, extra=None):
+    """Registra una actividad si el usuario es Nita/Lausita."""
+    if not username or username not in NITA_USERNAMES:
+        return
+    log = ActivityLog(
+        username=username,
+        action=action,
+        object_type=object_type,
+        object_id=str(object_id) if object_id is not None else None,
+        object_name=object_name,
+        object_url=object_url,
+        extra=extra
+    )
+    db.session.add(log)
+    db.session.commit()

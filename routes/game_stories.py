@@ -2,7 +2,7 @@ from flask import request, jsonify, render_template, session, Response
 from flask_login import current_user, login_required
 from models import db, Story, WeeklyStory, WeeklyStoryComment, StoryComment, CommentRead, CommentLike, ImageComment
 from datetime import datetime
-from utils import get_session_id, costa_rica_now_str
+from utils import get_session_id, costa_rica_now_str, log_activity
 import re
 
 _socketio = None
@@ -208,6 +208,11 @@ def register_game_stories_routes(bp):
             )
             db.session.add(comment)
             db.session.commit()
+            
+            log_activity(username, 'comment', 'weekly_comment', story.title or 'Historia de la semana',
+                         object_url='/weekly-story#comentarios',
+                         object_id=comment.id,
+                         extra=content)
             
             # Notificar actividad de nitalaosita
             if username == 'nitalaosita' and _socketio:

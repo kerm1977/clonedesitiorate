@@ -1,6 +1,7 @@
 from flask import render_template, send_file, redirect, url_for, jsonify, request
 from flask_login import login_required, current_user
 from models import db, Image
+from utils import log_activity
 import os
 import io
 import mimetypes
@@ -64,6 +65,9 @@ def register_game_images_routes(bp):
         if not current_user.is_authenticated or not current_user.is_superuser:
             return redirect(url_for('auth.login'))
         img = Image.query.get_or_404(image_id)
+        log_activity(current_user.username, 'view', 'image', img.filename,
+                     object_url=url_for('game.view_image', image_id=img.id),
+                     object_id=img.id)
         return render_template('view_image.html', image=img)
 
     @bp.route('/img/<int:image_id>')
@@ -140,6 +144,9 @@ def register_game_images_routes(bp):
         img = Image.query.get_or_404(image_id)
         if not os.path.exists(img.filepath):
             return "Imagen no encontrada", 404
+        log_activity(current_user.username, 'download', 'image', img.filename,
+                     object_url=url_for('game.serve_image', image_id=img.id),
+                     object_id=img.id)
         return send_file(img.filepath, as_attachment=True, download_name=img.filename, conditional=True)
 
     @bp.route('/search-folder')

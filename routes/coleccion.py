@@ -6,6 +6,7 @@ import random
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import db, CollectionOpinion, User, Image
+from utils import log_activity
 
 coleccion_bp = Blueprint('coleccion', __name__, url_prefix='/coleccion')
 
@@ -234,6 +235,8 @@ def serve_file(filename):
     if _is_safe_path(COLECCION_FOLDER, full_path) and os.path.isfile(full_path):
         mtype = mimetypes.guess_type(full_path)[0] or 'application/octet-stream'
         if request.args.get('download'):
+            log_activity(current_user.username, 'download', 'collection_file', filename,
+                         object_url=url_for('coleccion.serve_file', filename=filename, download=1))
             return send_file(full_path, mimetype=mtype, as_attachment=True, conditional=True)
         return send_file(full_path, mimetype=mtype, conditional=True)
     # Fallback a archivos de la galería
