@@ -237,7 +237,7 @@ def serve_file(filename):
             return send_file(full_path, mimetype=mtype, as_attachment=True, conditional=True)
         return send_file(full_path, mimetype=mtype, conditional=True)
     # Fallback a archivos de la galería
-    img = Image.query.filter_by(filename=filename).first()
+    img = Image.query.filter(Image.filename.ilike(filename)).first()
     if img and os.path.isfile(img.filepath):
         if request.args.get('download'):
             return redirect(url_for('game.download_image', image_id=img.id))
