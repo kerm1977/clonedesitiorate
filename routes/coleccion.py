@@ -1,9 +1,10 @@
 import os
 import io
 import mimetypes
+import hashlib
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, CollectionOpinion, User
+from models import db, CollectionOpinion, User, Image
 
 coleccion_bp = Blueprint('coleccion', __name__, url_prefix='/coleccion')
 
@@ -67,6 +68,14 @@ def _get_low_res_path(filename, full_path):
     return low_path if os.path.exists(low_path) else None
 
 
+def _get_image_low_path(filename, full_path):
+    if not os.path.isfile(full_path):
+        return None
+    os.makedirs(LOW_RES_CACHE_DIR, exist_ok=True)
+    h = hashlib.md5(full_path.encode('utf-8')).hexdigest() + '.webp'
+    return os.path.join(LOW_RES_CACHE_DIR, h)
+
+
 def _list_files():
     if not os.path.isdir(COLECCION_FOLDER):
         return []
@@ -93,14 +102,55 @@ def index():
     superuser_usernames = {u.username for u in User.query.filter_by(is_superuser=True).all() if u.username}
     is_superuser = current_user.is_superuser
     is_nita = current_user.username == 'nitalaosita'
+
+    # Agregar imágenes de la galería para que aparezcan en Colecciones
+    for img in Image.query.filter_by(active=True).all():
+        if not img.filepath or not os.path.isfile(img.filepath):
+            continue
+        ext = os.path.splitext(img.filename)[1].lower()
+        if img.is_video:
+            files.append({
+                'name': img.filename,
+                'type': 'video',
+                'mime': mimetypes.guess_type(img.filepath)[0] or 'video/mp4',
+                'playable': ext in BROWSER_VIDEO_EXTS,
+                'from_game': True,
+                'game_id': img.id,
+                'is_video': True
+            })
+        elif ext in IMAGE_EXTS:
+            files.append({
+                'name': img.filename,
+                'type': 'image',
+                'mime': mimetypes.guess_type(img.filepath)[0] or 'application/octet-stream',
+                'from_game': True,
+                'game_id': img.id,
+                'is_video': False
+            })
+
     for f in files:
-        if f['type'] == 'video':
-            full_path = os.path.join(COLECCION_FOLDER, f['name'])
-            f['thumb'] = _get_video_thumb(f['name'], full_path)
+        if f.get('from_game'):
+            if f['is_video']:
+                f['thumb'] = None
+            else:
+                f['thumb'] = url_for('game.serve_thumbnail', image_id=f['game_id'])
+            f['view_url'] = url_for('game.serve_image', image_id=f['game_id'])
+            f['low_url'] = url_for('game.serve_low_image', image_id=f['game_id'])
+            f['download_url'] = url_for('game.download_image', image_id=f['game_id'])
         else:
-            f['thumb'] = None
+            full_path = os.path.join(COLECCION_FOLDER, f['name'])
+            if f['type'] == 'video':
+                f['thumb'] = _get_video_thumb(f['name'], full_path)
+            else:
+                f['thumb'] = None
+            f['view_url'] = url_for('coleccion.serve_file', filename=f['name'])
+            f['low_url'] = url_for('coleccion.serve_low', filename=f['name']) if f['type'] == 'image' else None
+            f['download_url'] = url_for('coleccion.serve_file', filename=f['name'], download='1')
+
         all_opinions = CollectionOpinion.query.filter_by(filename=f['name']).order_by(CollectionOpinion.created_at.desc()).all()
-        if is_superuser:
+        if f.get('from_game'):
+            f['opinions'] = []
+        elif is_superuser:
             f['opinions'] = all_opinions
         elif is_nita:
             f['opinions'] = [op for op in all_opinions if op.username in superuser_usernames or op.username == current_user.username]
@@ -172,10 +222,28 @@ def serve_low(filename):
     full_path = os.path.join(COLECCION_FOLDER, filename)
     if not _is_safe_path(COLECCION_FOLDER, full_path) or not os.path.isfile(full_path):
         abort(404)
-    low_path = _get_low_res_path(filename, full_path)
-    if low_path and os.path.exists(low_path):
-        return send_file(low_path, mimetype='video/mp4')
-    abort(404)
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in IMAGE_EXTS:
+        abort(404)
+
+    cache_path = _get_image_low_path(filename, full_path)
+    if os.path.exists(cache_path):
+        response = send_file(cache_path, mimetype='image/webp', conditional=True)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
+
+    try:
+        from PIL import Image as PILImage
+        pil_img = PILImage.open(full_path)
+        pil_img = pil_img.convert('RGB')
+        pil_img.thumbnail((1024, 1024), PILImage.LANCZOS)
+        pil_img.save(cache_path, format='WEBP', quality=30, optimize=True, method=0)
+
+        response = send_file(cache_path, mimetype='image/webp', conditional=True)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
+    except Exception:
+        return send_file(full_path, conditional=True)
 
 
 @coleccion_bp.route('/thumb/<path:filename>')

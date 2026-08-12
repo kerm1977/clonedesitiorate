@@ -9,12 +9,19 @@ from PIL import Image as PILImage
 
 DISK_SEARCH_FOLDER = r'D:\Nueva carpeta'
 THUMB_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'cache', 'game_thumbs')
+LOW_RES_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'cache', 'game_low')
 
 
 def _get_game_thumb_path(filepath):
     os.makedirs(THUMB_CACHE_DIR, exist_ok=True)
     h = hashlib.md5(filepath.encode('utf-8')).hexdigest() + '.webp'
     return os.path.join(THUMB_CACHE_DIR, h)
+
+
+def _get_game_low_path(filepath):
+    os.makedirs(LOW_RES_CACHE_DIR, exist_ok=True)
+    h = hashlib.md5(filepath.encode('utf-8')).hexdigest() + '.webp'
+    return os.path.join(LOW_RES_CACHE_DIR, h)
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif'}
 VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
 
@@ -58,6 +65,34 @@ def register_game_images_routes(bp):
             pil_img = pil_img.convert('RGB')
             pil_img.thumbnail(thumb_size, PILImage.LANCZOS)
             pil_img.save(cache_path, format='WEBP', quality=35, optimize=True, method=0)
+
+            response = send_file(cache_path, mimetype='image/webp', conditional=True)
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
+        except Exception:
+            return send_file(img.filepath, conditional=True)
+
+    @bp.route('/img/<int:image_id>/low')
+    def serve_low_image(image_id):
+        img = Image.query.get_or_404(image_id)
+        if img.is_video or not os.path.exists(img.filepath):
+            return "No disponible", 404
+
+        ext = os.path.splitext(img.filepath)[1].lower()
+        if ext not in {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}:
+            return send_file(img.filepath, conditional=True)
+
+        cache_path = _get_game_low_path(img.filepath)
+        if os.path.exists(cache_path):
+            response = send_file(cache_path, mimetype='image/webp', conditional=True)
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
+
+        try:
+            pil_img = PILImage.open(img.filepath)
+            pil_img = pil_img.convert('RGB')
+            pil_img.thumbnail((1024, 1024), PILImage.LANCZOS)
+            pil_img.save(cache_path, format='WEBP', quality=30, optimize=True, method=0)
 
             response = send_file(cache_path, mimetype='image/webp', conditional=True)
             response.headers['Cache-Control'] = 'public, max-age=604800'

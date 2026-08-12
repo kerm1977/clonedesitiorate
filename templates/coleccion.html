@@ -61,9 +61,13 @@
                     <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);">⬇</div>
                 </div>
                 {% else %}
-                <img src="{{ url_for('coleccion.serve_file', filename=f.name) }}"
+                <img src="{% if f.thumb %}{{ f.thumb }}{% else %}{{ f.low_url or f.view_url }}{% endif %}"
+                     data-low="{{ f.low_url or f.view_url }}"
+                     data-view="{{ f.view_url }}"
+                     data-download="{{ f.download_url }}"
+                     data-filename="{{ f.name }}"
                      class="w-100" style="height:180px; object-fit:cover; cursor:pointer;"
-                     alt="{{ f.name }}" onclick="openImageModal('{{ url_for('coleccion.serve_file', filename=f.name) }}')">
+                     alt="{{ f.name }}" onclick="openImageModal(this)">
                 {% endif %}
                 <div class="card-body p-2 text-center">
                     <small class="text-muted text-truncate d-block" style="font-size:0.75rem;" title="{{ f.name }}">{{ f.name }}</small>
@@ -130,23 +134,33 @@ function downloadVideo(el) {
     setTimeout(() => a.remove(), 100);
 }
 
-function openImageModal(src) {
-    const img = document.createElement('img');
-    img.src = src;
-    img.style.maxWidth = '90vw';
-    img.style.maxHeight = '90vh';
+function openImageModal(el) {
+    const low = el.dataset.low;
+    const download = el.dataset.download;
+    const filename = el.dataset.filename || 'Imagen';
+    if (!low) return;
 
     const modal = document.createElement('div');
     modal.style.position = 'fixed';
     modal.style.inset = '0';
-    modal.style.background = 'rgba(0,0,0,0.85)';
+    modal.style.background = 'rgba(0,0,0,0.92)';
     modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
     modal.style.alignItems = 'center';
     modal.style.justifyContent = 'center';
     modal.style.zIndex = '9999';
+    modal.style.padding = '20px';
     modal.style.cursor = 'zoom-out';
-    modal.appendChild(img);
-    modal.onclick = () => document.body.removeChild(modal);
+    modal.innerHTML = `
+        <div style="color:#fff; text-align:center; margin-bottom:16px; max-width:90vw;">
+            <p style="margin:0 0 12px; font-size:0.95rem; text-shadow:0 1px 4px #000;">Imagen en calidad reducida. Descargue el archivo original para verlo en alta calidad.</p>
+            <a href="${download}" download class="btn btn-danger btn-sm rounded-pill" style="font-size:0.85rem; padding:6px 18px;">
+                ⬇ Descargar original
+            </a>
+        </div>
+        <img src="${low}" style="max-width:90vw; max-height:70vh; object-fit:contain; border-radius:12px;" alt="${filename}">
+    `;
+    modal.onclick = (e) => { if (e.target === modal) document.body.removeChild(modal); };
     document.body.appendChild(modal);
 }
 

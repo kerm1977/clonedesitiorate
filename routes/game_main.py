@@ -33,50 +33,7 @@ def register_game_routes(bp):
     def index():
         if not current_user.is_authenticated:
             return _set_no_cache(make_response(render_template('login.html')))
-        
-        page = request.args.get('page', 1, type=int)
-        per_page = 30
-        
-        images = Image.query.filter_by(active=True).order_by(db.func.random()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        
-        player_name = current_user.username if current_user.username else session.get('player_name', '')
-        
-        # Contar comentarios no leídos para nitalaosita
-        unread_count = 0
-        weekly_comments_count = 0
-        if current_user.username == 'nitalaosita':
-            # Cargar en una sola consulta todos los comentarios ya leídos por nitalaosita
-            reads = {
-                (r.comment_type, r.comment_id)
-                for r in CommentRead.query.filter_by(user_id=current_user.id).all()
-            }
-
-            # Comentarios de historias de semana no leídos
-            weekly_comments = WeeklyStoryComment.query.all()
-            weekly_comments_count = len(weekly_comments)
-            for comment in weekly_comments:
-                if ('weekly', comment.id) not in reads:
-                    unread_count += 1
-            # Comentarios de historias de usuario no leídos
-            story_comments = StoryComment.query.all()
-            for comment in story_comments:
-                if ('story', comment.id) not in reads:
-                    unread_count += 1
-            # Comentarios de imágenes no leídos
-            image_comments = ImageComment.query.all()
-            for comment in image_comments:
-                if ('image', comment.id) not in reads:
-                    unread_count += 1
-        
-        return _set_no_cache(make_response(render_template('index.html', images=images.items,
-                               player_name=player_name,
-                               unread_comments=unread_count,
-                               weekly_comments_count=weekly_comments_count,
-                               page=page,
-                               has_next=images.has_next,
-                               total_pages=images.pages)))
+        return redirect(url_for('coleccion.index'))
 
     @bp.route('/images')
     def get_images():
