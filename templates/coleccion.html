@@ -151,7 +151,7 @@ function downloadVideo(el) {
     const src = el.dataset.src;
     if (!src) return;
     const a = document.createElement('a');
-    a.href = src + (src.includes('?') ? '&' : '?') + 'download=1';
+    a.href = src.includes('download=1') ? src : src + (src.includes('?') ? '&' : '?') + 'download=1';
     a.download = '';
     a.style.display = 'none';
     document.body.appendChild(a);

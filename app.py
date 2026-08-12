@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from flask import Flask
+from flask import Flask, send_file
 from sqlalchemy import text
 from flask_login import LoginManager
 from flask_socketio import SocketIO
@@ -74,6 +74,12 @@ def create_app():
     @app.route('/robots.txt')
     def robots_txt():
         return app.send_static_file('robots.txt')
+
+    @app.route('/favicon.ico')
+    def favicon():
+        import base64, io
+        png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+        return send_file(io.BytesIO(png), mimetype='image/png')
 
     from routes.game import game_bp
     from routes.auth import auth_bp
