@@ -886,10 +886,4 @@ def register_game_chat_routes(bp):
         
         db.session.commit()
         
-        # Notificar a cada remitente que sus mensajes fueron leídos
-        if _socketio:
-            for sender, ids in sender_messages.items():
-                for msg_id in ids:
-                    _socketio.emit('message_status', {'msg_id': msg_id, 'status': 'read'}, to=f'user_{sender}')
-        
         return jsonify(success=True, marked=len(messages))

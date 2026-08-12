@@ -280,6 +280,58 @@ def register_socket_events(socketio):
         # Usar la sala personal del remitente en lugar de su SID, más robusto ante reconexiones
         emit('message_status', {'msg_id': msg_id, 'status': 'received'}, to=f'user_{sender}')
 
+    @socketio.on('message_read')
+    def on_message_read(data):
+        """Receptor leyó mensajes — marcar en DB y notificar a los remitentes"""
+        if not current_user.is_authenticated:
+            return
+        partner = data.get('partner')
+        chat_type = data.get('chat_type', 'private')
+        if not partner:
+            return
+        current_name = current_user.username
+        try:
+            if chat_type == 'moderator':
+                if current_name == 'nitalaosita' and partner == 'nitalaosita':
+                    messages = ChatMessage.query.filter(
+                        db.and_(
+                            ChatMessage.chat_type == 'moderator',
+                            ChatMessage.receiver_name == 'nitalaosita',
+                            ChatMessage.sender_name != 'nitalaosita',
+                            ChatMessage.is_read == False
+                        )
+                    ).all()
+                else:
+                    messages = ChatMessage.query.filter(
+                        db.and_(
+                            ChatMessage.chat_type == 'moderator',
+                            ChatMessage.sender_name == 'nitalaosita',
+                            ChatMessage.is_read == False
+                        )
+                    ).all()
+            else:
+                messages = ChatMessage.query.filter(
+                    db.and_(
+                        ChatMessage.chat_type == 'private',
+                        ChatMessage.sender_name == partner,
+                        ChatMessage.receiver_name == current_name,
+                        ChatMessage.is_read == False
+                    )
+                ).all()
+
+            sender_messages = {}
+            for msg in messages:
+                msg.is_read = True
+                sender_messages.setdefault(msg.sender_name, []).append(msg.id)
+
+            db.session.commit()
+
+            for sender, ids in sender_messages.items():
+                for msg_id in ids:
+                    emit('message_status', {'msg_id': msg_id, 'status': 'read'}, to=f'user_{sender}')
+        except Exception:
+            db.session.rollback()
+
     @socketio.on('typing')
     def on_typing(data):
         if not current_user.is_authenticated:

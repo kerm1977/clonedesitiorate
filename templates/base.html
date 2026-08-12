@@ -952,7 +952,7 @@ function addNitaActivity(data) {
 function initSocket() {
     if (socket) return;
     socket = io({
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 300,
@@ -1069,7 +1069,7 @@ function initSocket() {
         if (chatIsActive && shouldShow) {
             console.log('Appending message in real-time');
             appendMessage(msg.display_sender || msg.sender, msg.content, false, msg.time, msg.image_path, msg.id);
-            fetch('/chat/mark-read/' + encodeURIComponent(msg.sender) + '?chat_type=' + currentChatType, { method: 'POST' }).catch(() => {});
+            socket.emit('message_read', { partner: msg.sender, chat_type: currentChatType });
         } else {
             // Chat no abierto o mensaje de otro interlocutor → solo badge
             console.log('Not showing message - chat not active or shouldShow false');
@@ -1326,8 +1326,8 @@ function openChat(username) {
     }
 
     // Marcar leídos
-    fetch('/chat/mark-read/' + encodeURIComponent(username) + '?chat_type=' + currentChatType, { method: 'POST' })
-        .then(() => updateUnreadBadge());
+    socket.emit('message_read', { partner: username, chat_type: currentChatType });
+    updateUnreadBadge();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1369,8 +1369,8 @@ function openMaskedChat(displayName, realUsername) {
     }
 
     // Marcar leídos
-    fetch('/chat/mark-read/' + encodeURIComponent(realUsername) + '?chat_type=' + currentChatType, { method: 'POST' })
-        .then(() => updateUnreadBadge());
+    socket.emit('message_read', { partner: realUsername, chat_type: currentChatType });
+    updateUnreadBadge();
     
     // Limpiar el input
     const userSearchInput = document.getElementById('userSearchInput');
