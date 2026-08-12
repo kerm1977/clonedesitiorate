@@ -156,7 +156,20 @@ def index():
             f['opinions'] = [op for op in all_opinions if op.username in superuser_usernames or op.username == current_user.username]
         else:
             f['opinions'] = [op for op in all_opinions if op.username == current_user.username]
-    return render_template('coleccion.html', files=files, superuser_usernames=superuser_usernames)
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 15
+    files.sort(key=lambda x: x['name'].lower())
+    total = len(files)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * per_page
+    paginated_files = files[start:start + per_page]
+    has_prev = page > 1
+    has_next = page < total_pages
+
+    return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
+                           page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])

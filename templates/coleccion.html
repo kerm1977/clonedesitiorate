@@ -119,6 +119,19 @@
         <p>No se encontraron imágenes ni videos en la colección.</p>
     </div>
     {% endif %}
+    {% if total_pages > 1 %}
+    <nav aria-label="Página de colección" class="my-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page - 1 }}">Anterior</a>
+            </li>
+            <li class="page-item active"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+            <li class="page-item {% if not has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page + 1 }}">Siguiente</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <script>
