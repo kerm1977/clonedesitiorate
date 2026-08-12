@@ -7,6 +7,18 @@
     <h2 class="fun-title text-center mb-1">📁 Colecciones</h2>
     <p class="text-center text-muted mb-4" style="font-size:0.9rem;">Descargue los videos</p>
 
+    <div class="d-flex justify-content-center gap-2 mb-4">
+        <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm {{ 'btn-primary' if filter_type == 'all' else 'btn-outline-secondary' }}" title="Ver todo">
+            <i class="bi bi-grid-3x3-gap"></i> Todo
+        </a>
+        <a href="{{ url_for('coleccion.index', filter='images') }}" class="btn btn-sm {{ 'btn-primary' if filter_type == 'images' else 'btn-outline-secondary' }}" title="Solo imágenes">
+            <i class="bi bi-image"></i> Imágenes
+        </a>
+        <a href="{{ url_for('coleccion.index', filter='videos') }}" class="btn btn-sm {{ 'btn-primary' if filter_type == 'videos' else 'btn-outline-secondary' }}" title="Solo videos">
+            <i class="bi bi-camera-video"></i> Videos
+        </a>
+    </div>
+
     {% if files %}
     <div class="row g-3">
         {% for f in files %}
@@ -123,11 +135,11 @@
     <nav aria-label="Página de colección" class="my-4">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not has_prev %}disabled{% endif %}">
-                <a class="page-link" href="?page={{ page - 1 }}">Anterior</a>
+                <a class="page-link" href="?page={{ page - 1 }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}">Anterior</a>
             </li>
             <li class="page-item active"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
             <li class="page-item {% if not has_next %}disabled{% endif %}">
-                <a class="page-link" href="?page={{ page + 1 }}">Siguiente</a>
+                <a class="page-link" href="?page={{ page + 1 }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}">Siguiente</a>
             </li>
         </ul>
     </nav>

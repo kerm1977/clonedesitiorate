@@ -158,6 +158,12 @@ def index():
         else:
             f['opinions'] = [op for op in all_opinions if op.username == current_user.username]
 
+    filter_type = request.args.get('filter', 'all')
+    if filter_type == 'images':
+        files = [f for f in files if f['type'] == 'image']
+    elif filter_type == 'videos':
+        files = [f for f in files if f['type'] == 'video']
+
     page = request.args.get('page', 1, type=int)
     per_page = 15
     random.shuffle(files)
@@ -170,7 +176,8 @@ def index():
     has_next = page < total_pages
 
     return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
-                           page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next)
+                           page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
+                           filter_type=filter_type)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])
