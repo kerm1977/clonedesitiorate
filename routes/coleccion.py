@@ -16,7 +16,7 @@ COLECCION_FOLDER = r'E:\coleccion'
 THUMB_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'cache', 'coleccion_thumbs')
 LOW_RES_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'cache', 'coleccion_low_res')
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif'}
-VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
+VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv', '.wmv', '.m4v', '.h264', '.264', '.mpeg', '.mpg', '.3gp', '.ts'}
 BROWSER_VIDEO_EXTS = {'.mp4', '.webm', '.mov'}
 
 
@@ -130,12 +130,9 @@ def index():
 
     for f in files:
         if f.get('from_game'):
-            if f['is_video']:
-                f['thumb'] = None
-            else:
-                f['thumb'] = url_for('game.serve_thumbnail', image_id=f['game_id'])
+            f['thumb'] = url_for('game.serve_thumbnail', image_id=f['game_id'])
             f['view_url'] = url_for('game.serve_image', image_id=f['game_id'])
-            f['low_url'] = url_for('game.serve_low_image', image_id=f['game_id'])
+            f['low_url'] = url_for('game.serve_low_image', image_id=f['game_id']) if not f['is_video'] else None
             f['download_url'] = url_for('game.download_image', image_id=f['game_id'])
         else:
             full_path = os.path.join(COLECCION_FOLDER, f['name'])

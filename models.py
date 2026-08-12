@@ -20,7 +20,7 @@ class Image(db.Model):
     
     @property
     def is_video(self):
-        video_extensions = ('.mp4', '.webm', '.mov', '.avi', '.mkv')
+        video_extensions = ('.mp4', '.webm', '.mov', '.avi', '.mkv', '.wmv', '.m4v', '.h264', '.264', '.mpeg', '.mpg', '.3gp', '.ts')
         return self.filename.lower().endswith(video_extensions)
 class Message(db.Model):
     id=db.Column(db.Integer,primary_key=True)

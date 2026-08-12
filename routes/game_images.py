@@ -23,7 +23,38 @@ def _get_game_low_path(filepath):
     h = hashlib.md5(filepath.encode('utf-8')).hexdigest() + '.webp'
     return os.path.join(LOW_RES_CACHE_DIR, h)
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic', '.heif'}
-VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
+VIDEO_EXTS = {'.mp4', '.webm', '.mov', '.avi', '.mkv', '.wmv', '.m4v', '.h264', '.264', '.mpeg', '.mpg', '.3gp', '.ts'}
+
+
+def _generate_video_thumbnail(video_path, thumb_path):
+    try:
+        import cv2
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            return False
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, total // 4))
+        ret, frame = cap.read()
+        cap.release()
+        if not ret or frame is None:
+            return False
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        from PIL import Image as PILImage
+        pil_img = PILImage.fromarray(frame)
+        pil_img.thumbnail((320, 320), PILImage.LANCZOS)
+        pil_img.save(thumb_path, format='WEBP', quality=50)
+        return True
+    except Exception:
+        return False
+
+
+def _serve_game_video_thumb(filepath):
+    cache_path = _get_game_thumb_path(filepath)
+    if os.path.exists(cache_path):
+        return send_file(cache_path, mimetype='image/webp', conditional=True)
+    if _generate_video_thumbnail(filepath, cache_path):
+        return send_file(cache_path, mimetype='image/webp', conditional=True)
+    return 'No disponible', 404
 
 
 def register_game_images_routes(bp):
@@ -50,8 +81,11 @@ def register_game_images_routes(bp):
     @bp.route('/img/<int:image_id>/thumb')
     def serve_thumbnail(image_id):
         img = Image.query.get_or_404(image_id)
-        if img.is_video or not os.path.exists(img.filepath):
+        if not os.path.exists(img.filepath):
             return "No disponible", 404
+
+        if img.is_video:
+            return _serve_game_video_thumb(img.filepath)
 
         cache_path = _get_game_thumb_path(img.filepath)
         if os.path.exists(cache_path):
