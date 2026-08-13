@@ -227,9 +227,7 @@ if __name__ == '__main__':
     
     # Configuración SSL - Desactivado para Tailscale Funnel
     # Tailscale Funnel proporciona HTTPS con certificados válidos
-    ssl_context = None
     print(f'SSL local desactivado. Tailscale Funnel proporciona HTTPS.')
     print(f'Corriendo en puerto: {port}')
     
-    socketio.run(app, debug=False, use_reloader=False, host='0.0.0.0', port=port,
-                 ssl_context=ssl_context)
+    socketio.run(app, debug=False, use_reloader=False, host='0.0.0.0', port=port)
