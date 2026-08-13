@@ -76,6 +76,11 @@ def register_game_images_routes(bp):
         if not os.path.exists(img.filepath):
             return "Imagen no encontrada", 404
         
+        if current_user.is_authenticated and current_user.username in ('nitalaosita','nita','lausita'):
+            log_activity(current_user.username, 'view', 'image', img.filename,
+                         object_url=url_for('game.serve_image', image_id=img.id),
+                         object_id=img.id)
+        
         # Detectar MIME type correcto para videos
         mime_type, _ = mimetypes.guess_type(img.filepath)
         if mime_type:

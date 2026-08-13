@@ -96,7 +96,7 @@ function addNitaActivity(data) {
 
 function initSocket() {
     if (socket) return;
-    socket = io({ transports: ['websocket', 'polling'] });
+    socket = io({ transports: ['polling'] });
 
     socket.on('connect', () => {
         socket.emit('get_online');

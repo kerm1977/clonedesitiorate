@@ -946,7 +946,7 @@ function addNitaActivity(data) {
 function initSocket() {
     if (socket) return;
     socket = io({
-        transports: ['websocket', 'polling'],
+        transports: ['polling'],
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 300,
