@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import json
 import re
@@ -33,7 +36,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading',
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet',
                       ping_timeout=60, ping_interval=25)
 
     @app.teardown_appcontext
@@ -229,4 +232,4 @@ if __name__ == '__main__':
     print(f'Corriendo en puerto: {port}')
     
     socketio.run(app, debug=False, use_reloader=False, host='0.0.0.0', port=port,
-                 ssl_context=ssl_context, allow_unsafe_werkzeug=True)
+                 ssl_context=ssl_context)
