@@ -10,7 +10,9 @@ $LogFile    = Join-Path $ProjectDir "server.log"
 Set-Location $ProjectDir
 
 function Log($msg) {
-    Add-Content -Path $LogFile -Value "[$(Get-Date)] $msg"
+    $line = "[$(Get-Date)] $msg"
+    Add-Content -Path $LogFile -Value $line
+    Write-Host $line
 }
 
 # --- 1) Matar cualquier proceso viejo/conflictivo (local) ---
