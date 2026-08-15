@@ -609,8 +609,10 @@ def delete_image(image_id):
 
     def _delete_allowed(filepath):
         filepath = os.path.normpath(filepath)
+        # Permitir cualquier ubicacion dentro del disco E:\
+        if os.path.splitdrive(filepath)[0].upper() == 'E:':
+            return True
         bases = [
-            os.path.normpath(r'E:\\'),
             os.path.normpath(COLECCION_FOLDER),
             os.path.normpath(os.path.join(current_app.root_path, 'uploads')),
             os.path.normpath(os.path.join(current_app.root_path, 'static', 'uploads')),
