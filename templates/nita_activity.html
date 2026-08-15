@@ -12,7 +12,7 @@
         </a>
     </div>
 
-    {% macro activity_list(items, empty_msg) %}
+    {% macro activity_list(items, empty_msg, show_delete=False) %}
         {% if items %}
             <ul class="list-unstyled mb-0">
                 {% for e in items %}
@@ -31,6 +31,13 @@
                                 <a href="{{ e.url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
                                     <i class="bi bi-box-arrow-up-right me-1"></i>Ver
                                 </a>
+                                {% if show_delete and e.image_id %}
+                                <form method="POST" action="{{ url_for('admin.delete_image', image_id=e.image_id) }}" class="d-inline ms-2" onsubmit="return confirm('¿Eliminar físicamente esta imagen?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger mt-2">
+                                        <i class="bi bi-trash me-1"></i>Eliminar
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="text-end text-nowrap text-muted small">
@@ -68,7 +75,7 @@
                     <i class="bi bi-hand-thumbs-down-fill me-2"></i>Imágenes que no le gustaron (Dislike)
                 </div>
                 <div class="card-body p-0">
-                    {{ activity_list(dislikes, 'No hay dislikes registrados aún.') }}
+                    {{ activity_list(dislikes, 'No hay dislikes registrados aún.', show_delete=True) }}
                 </div>
             </div>
         </div>

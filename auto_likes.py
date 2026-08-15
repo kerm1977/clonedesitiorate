@@ -25,8 +25,8 @@ def _auto_like_loop():
     from models import WeeklyStoryComment, db
 
     while not _stop_event.is_set():
-        # Esperar intervalo aleatorio de 20-30 segundos (≈ 2-3 likes/min)
-        interval = random.uniform(20, 30)
+        # Esperar intervalo aleatorio de 120-180 segundos (≈ 0.5 likes/min)
+        interval = random.uniform(120, 180)
         _stop_event.wait(interval)
         if _stop_event.is_set():
             break

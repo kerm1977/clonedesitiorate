@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
-from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog
+from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage
 from datetime import datetime, timedelta
 import json
 import os
@@ -568,13 +568,20 @@ def nita_activity_history():
         parts = cr.split(' ')
         day = parts[0] if parts else ''
         time = parts[1] + ' ' + parts[2] if len(parts) >= 3 else cr
+        image_id = None
+        if log.object_type == 'image' and log.object_id:
+            try:
+                image_id = int(log.object_id)
+            except (TypeError, ValueError):
+                image_id = None
         return {
             'name': log.object_name,
             'url': log.object_url or '#',
             'username': log.username,
             'day': day,
             'time': time,
-            'extra': log.extra or ''
+            'extra': log.extra or '',
+            'image_id': image_id
         }
 
     likes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'like').order_by(ActivityLog.created_at.desc()).limit(200).all()
@@ -585,3 +592,64 @@ def nita_activity_history():
                            likes=[_format(log) for log in likes],
                            dislikes=[_format(log) for log in dislikes],
                            other_entries=[_format(log) for log in other])
+
+
+@admin_bp.route('/delete-image/<int:image_id>', methods=['POST'])
+@login_required
+def delete_image(image_id):
+    if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
+        return redirect(url_for('game.index'))
+
+    img = Image.query.get(image_id)
+    if not img:
+        flash('Imagen no encontrada.', 'error')
+        return redirect(request.referrer or url_for('admin.nita_activity_history'))
+
+    from routes.coleccion import COLECCION_FOLDER
+
+    def _delete_allowed(filepath):
+        filepath = os.path.normpath(filepath)
+        bases = [
+            os.path.normpath(COLECCION_FOLDER),
+            os.path.normpath(os.path.join(current_app.root_path, 'uploads')),
+            os.path.normpath(os.path.join(current_app.root_path, 'static', 'uploads')),
+        ]
+        for base in bases:
+            try:
+                if os.path.commonpath([base, filepath]) == base:
+                    return True
+            except ValueError:
+                continue
+        return False
+
+    if img.filepath and os.path.isfile(img.filepath):
+        if not _delete_allowed(img.filepath):
+            flash('La ruta del archivo no está en una carpeta permitida.', 'error')
+            return redirect(request.referrer or url_for('admin.nita_activity_history'))
+        try:
+            os.remove(img.filepath)
+        except Exception as e:
+            flash(f'No se pudo borrar el archivo: {e}', 'error')
+            return redirect(request.referrer or url_for('admin.nita_activity_history'))
+
+    # Borrar referencias relacionadas
+    db.session.query(ImageComment).filter_by(image_id=image_id).delete(synchronize_session=False)
+    questions = ImageQuestion.query.filter_by(image_id=image_id).all()
+    qids = [q.id for q in questions if q.id]
+    if qids:
+        db.session.query(ImageQuestionResponse).filter(ImageQuestionResponse.question_id.in_(qids)).delete(synchronize_session=False)
+    db.session.query(ImageQuestion).filter_by(image_id=image_id).delete(synchronize_session=False)
+    db.session.query(RatingFiveFeedback).filter_by(image_id=image_id).delete(synchronize_session=False)
+    db.session.query(Favorite).filter_by(image_id=image_id).delete(synchronize_session=False)
+    db.session.query(ImageVote).filter_by(image_id=image_id).delete(synchronize_session=False)
+    db.session.query(Message).filter_by(trigger_image_id=image_id).update({Message.trigger_image_id: None}, synchronize_session=False)
+
+    deleted_record = DeletedImage(filename=img.filename, deleted_by_user_id=current_user.id)
+    db.session.add(deleted_record)
+    db.session.delete(img)
+    db.session.commit()
+
+    log_activity(current_user.username, 'delete', 'image', img.filename,
+                 object_id=image_id, extra='Archivo borrado físicamente')
+    flash('Imagen eliminada físicamente y referencias de la base de datos.', 'success')
+    return redirect(request.referrer or url_for('admin.nita_activity_history'))
