@@ -610,6 +610,7 @@ def delete_image(image_id):
     def _delete_allowed(filepath):
         filepath = os.path.normpath(filepath)
         bases = [
+            os.path.normpath(r'E:\\'),
             os.path.normpath(COLECCION_FOLDER),
             os.path.normpath(os.path.join(current_app.root_path, 'uploads')),
             os.path.normpath(os.path.join(current_app.root_path, 'static', 'uploads')),
@@ -622,12 +623,24 @@ def delete_image(image_id):
                 continue
         return False
 
-    if img.filepath and os.path.isfile(img.filepath):
-        if not _delete_allowed(img.filepath):
+    target_path = img.filepath
+    if not target_path or not os.path.isfile(target_path):
+        # Buscar la imagen automáticamente bajo E:\ por su nombre
+        if img.filename:
+            for root, dirs, files in os.walk('E:\\'):
+                if img.filename in files:
+                    candidate = os.path.join(root, img.filename)
+                    if _delete_allowed(candidate):
+                        target_path = candidate
+                        break
+
+    if target_path and os.path.isfile(target_path):
+        if not _delete_allowed(target_path):
             flash('La ruta del archivo no está en una carpeta permitida.', 'error')
             return redirect(request.referrer or url_for('admin.nita_activity_history'))
         try:
-            os.remove(img.filepath)
+            os.chmod(target_path, 0o777)
+            os.remove(target_path)
         except Exception as e:
             flash(f'No se pudo borrar el archivo: {e}', 'error')
             return redirect(request.referrer or url_for('admin.nita_activity_history'))

@@ -124,8 +124,11 @@ function loadColeccionFilter(filter, page) {
                 btn.classList.toggle('btn-primary', active);
                 btn.classList.toggle('btn-outline-secondary', !active);
             });
-            const newUrl = filter === 'all' ? '/coleccion/' : '/coleccion/?filter=' + encodeURIComponent(filter);
-            window.history.replaceState({ filter: filter }, '', newUrl);
+            const params = new URLSearchParams();
+            if (filter !== 'all') params.set('filter', filter);
+            if (page !== 1) params.set('page', page);
+            const newUrl = params.toString() ? '/coleccion/?' + params.toString() : '/coleccion/';
+            window.history.replaceState({ filter: filter, page: page }, '', newUrl);
         })
         .catch(() => {
             if (content) content.innerHTML = '<div class="text-center p-4 text-danger">Error al cargar. Recarga la página.</div>';
