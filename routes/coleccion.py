@@ -5,7 +5,7 @@ import hashlib
 import random
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, CollectionOpinion, User, Image
+from models import db, CollectionOpinion, User, Image, ImageVote
 from utils import log_activity
 
 coleccion_bp = Blueprint('coleccion', __name__, url_prefix='/coleccion')
@@ -161,6 +161,27 @@ def index():
         else:
             f['opinions'] = [op for op in all_opinions if op.username == current_user.username]
 
+    user_id = current_user.id
+    is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
+    for f in files:
+        if f.get('from_game'):
+            img = Image.query.get(f['game_id'])
+        else:
+            full_path = os.path.join(COLECCION_FOLDER, f['name'])
+            img = Image.query.filter_by(filepath=full_path).first()
+            if not img and os.path.isfile(full_path):
+                img = Image(filename=f['name'], filepath=full_path, folder=COLECCION_FOLDER, active=False)
+                db.session.add(img)
+                db.session.commit()
+        if img:
+            f['image_id'] = img.id
+            f['like_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
+            f['dislike_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
+            user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=user_id).first()
+            f['user_vote'] = user_vote.vote_type if user_vote else None
+            f['view_url'] = url_for('game.serve_image', image_id=img.id) if f.get('from_game') else f['view_url']
+        f['is_moderator'] = is_moderator
+
     filter_type = request.args.get('filter', 'all')
     if filter_type == 'images':
         files = [f for f in files if f['type'] == 'image']
@@ -178,9 +199,13 @@ def index():
     has_prev = page > 1
     has_next = page < total_pages
 
+    if request.args.get('partial') == '1':
+        return render_template('partials/coleccion_grid.html', files=paginated_files,
+                               page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
+                               filter_type=filter_type, is_moderator=is_moderator)
     return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
                            page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
-                           filter_type=filter_type)
+                           filter_type=filter_type, is_moderator=is_moderator)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])

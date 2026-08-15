@@ -562,32 +562,26 @@ def nita_activity_history():
     if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
         return redirect(url_for('game.index'))
     from utils import costa_rica_str
-    logs = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita'))).order_by(ActivityLog.created_at.desc()).limit(200).all()
-    entries = []
-    for log in logs:
+
+    def _format(log):
         cr = costa_rica_str(log.created_at)
         parts = cr.split(' ')
         day = parts[0] if parts else ''
         time = parts[1] + ' ' + parts[2] if len(parts) >= 3 else cr
-        if log.action == 'download':
-            icon = '⬇️'
-            label = 'Descargó'
-        elif log.action == 'view':
-            icon = '👁️'
-            label = 'Vio'
-        elif log.action == 'comment':
-            icon = '💬'
-            label = 'Comentó'
-        else:
-            icon = '📌'
-            label = log.action.capitalize()
-        entries.append({
-            'icon': icon,
-            'label': label,
+        return {
             'name': log.object_name,
             'url': log.object_url or '#',
+            'username': log.username,
             'day': day,
             'time': time,
             'extra': log.extra or ''
-        })
-    return render_template('nita_activity.html', entries=entries)
+        }
+
+    likes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'like').order_by(ActivityLog.created_at.desc()).limit(200).all()
+    dislikes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'dislike').order_by(ActivityLog.created_at.desc()).limit(200).all()
+    other = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ~ActivityLog.action.in_(('like','dislike'))).order_by(ActivityLog.created_at.desc()).limit(100).all()
+
+    return render_template('nita_activity.html',
+                           likes=[_format(log) for log in likes],
+                           dislikes=[_format(log) for log in dislikes],
+                           other_entries=[_format(log) for log in other])

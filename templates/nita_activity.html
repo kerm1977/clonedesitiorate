@@ -12,45 +12,77 @@
         </a>
     </div>
 
-    <div class="card bg-dark text-white border-secondary">
-        <div class="card-body p-0">
-            {% if entries %}
-                <ul class="list-unstyled mb-0">
-                    {% for e in entries %}
-                    <li class="p-3">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                            <div class="d-flex gap-3 align-items-start" style="min-width:0;">
-                                <div style="font-size:1.4rem;flex-shrink:0;">{{ e.icon }}</div>
-                                <div style="min-width:0;">
-                                    <div class="fw-semibold mb-1">
-                                        {{ e.label }} <span class="text-white">{{ e.name }}</span>
-                                    </div>
-                                    {% if e.extra %}
-                                    <div class="text-muted small text-truncate" style="max-width:420px;" title="{{ e.extra }}">
-                                        "{{ e.extra }}"
-                                    </div>
-                                    {% endif %}
-                                    <a href="{{ e.url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver
-                                    </a>
+    {% macro activity_list(items, empty_msg) %}
+        {% if items %}
+            <ul class="list-unstyled mb-0">
+                {% for e in items %}
+                <li class="p-3">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div class="d-flex gap-3 align-items-start" style="min-width:0;">
+                            <div style="min-width:0;">
+                                <div class="fw-semibold mb-1 text-white">
+                                    {{ e.name }}
                                 </div>
-                            </div>
-                            <div class="text-end text-nowrap text-muted small">
-                                <div class="fw-semibold text-white">{{ e.day }}</div>
-                                <div>{{ e.time }}</div>
+                                {% if e.extra %}
+                                <div class="text-muted small text-truncate" style="max-width:420px;" title="{{ e.extra }}">
+                                    "{{ e.extra }}"
+                                </div>
+                                {% endif %}
+                                <a href="{{ e.url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver
+                                </a>
                             </div>
                         </div>
-                    </li>
-                    {% if not loop.last %}<hr class="my-0 opacity-25">{% endif %}
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <div class="p-4 text-center text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                    No hay actividad registrada aún.
+                        <div class="text-end text-nowrap text-muted small">
+                            <div class="fw-semibold text-white">{{ e.day }}</div>
+                            <div>{{ e.time }}</div>
+                            <div class="text-capitalize">{{ e.username }}</div>
+                        </div>
+                    </div>
+                </li>
+                {% if not loop.last %}<hr class="my-0 opacity-25">{% endif %}
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                {{ empty_msg }}
+            </div>
+        {% endif %}
+    {% endmacro %}
+
+    <div class="row g-4">
+        <div class="col-12 col-md-6">
+            <div class="card text-white border-0" style="background:#1b4332;">
+                <div class="card-header border-0 fw-bold">
+                    <i class="bi bi-hand-thumbs-up-fill me-2"></i>Imágenes que le gustaron (Like)
                 </div>
-            {% endif %}
+                <div class="card-body p-0">
+                    {{ activity_list(likes, 'No hay likes registrados aún.') }}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card text-white border-0" style="background:#5a0b0b;">
+                <div class="card-header border-0 fw-bold">
+                    <i class="bi bi-hand-thumbs-down-fill me-2"></i>Imágenes que no le gustaron (Dislike)
+                </div>
+                <div class="card-body p-0">
+                    {{ activity_list(dislikes, 'No hay dislikes registrados aún.') }}
+                </div>
+            </div>
         </div>
     </div>
+
+    {% if other_entries %}
+    <div class="card bg-dark text-white border-secondary mt-4">
+        <div class="card-header border-0">
+            <i class="bi bi-clock-history me-2"></i>Otras actividades
+        </div>
+        <div class="card-body p-0">
+            {{ activity_list(other_entries, 'No hay otras actividades.') }}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

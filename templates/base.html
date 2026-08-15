@@ -177,6 +177,81 @@
     <meta name="apple-mobile-web-app-title" content="🐻 PhotoBear">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
     {% block head %}{% endblock %}
+    <style>
+        .vote-overlay {
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+            display: flex;
+            gap: 6px;
+            z-index: 15;
+            background: rgba(0,0,0,0.55);
+            border-radius: 18px;
+            padding: 3px 7px;
+            align-items: center;
+            backdrop-filter: blur(3px);
+            font-size: 0.9rem;
+        }
+        .vote-overlay button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            padding: 1px 3px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+            transition: transform 0.15s;
+        }
+        .vote-overlay button:hover { transform: scale(1.15); }
+        .vote-overlay button.voted-like { color: #28e98c; }
+        .vote-overlay button.voted-dislike { color: #ff6b6b; }
+        .vote-overlay .vote-count { font-size: 0.8rem; min-width: 12px; text-align: center; }
+
+        .media-vote-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            cursor: zoom-out;
+        }
+        .media-vote-modal .media-vote-body {
+            background: transparent;
+            text-align: center;
+            width: 100%;
+            max-width: 90vw;
+        }
+        .media-vote-modal .media-vote-body img,
+        .media-vote-modal .media-vote-body video {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto;
+        }
+        .media-vote-modal .media-vote-body audio {
+            width: 80%;
+            margin: 20px auto;
+        }
+        .media-vote-modal .media-vote-info {
+            color: #fff;
+            margin: 12px 0;
+            text-align: center;
+            max-width: 90vw;
+        }
+        .media-vote-modal .vote-overlay {
+            position: static;
+            display: inline-flex;
+            margin: 8px auto;
+        }
+    </style>
 </head>
 <body>
 
@@ -2419,6 +2494,100 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cambiar nombres cada 30 minutos sin recargar el chat
     setInterval(renderFakeOnlineUsers, 1800000);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sistema global de Like / Dislike
+// ═══════════════════════════════════════════════════════════════════════════════
+window.currentUsername = '{{ current_user.username if current_user.is_authenticated else "" }}';
+window.isVoteModerator = window.currentUsername === 'nitalaosita' ||
+                         window.currentUsername === 'nita' ||
+                         window.currentUsername === 'lausita' ||
+                         '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+
+function makeVoteOverlayHTML(imageId, likeCount, dislikeCount, userVote) {
+    if (!window.isVoteModerator) return '';
+    likeCount = likeCount || 0;
+    dislikeCount = dislikeCount || 0;
+    const likeClass = userVote === 'like' ? 'voted-like' : '';
+    const dislikeClass = userVote === 'dislike' ? 'voted-dislike' : '';
+    return `<div class="vote-overlay" data-image-id="${imageId}" data-like="${likeCount}" data-dislike="${dislikeCount}" data-user-vote="${userVote || ''}">
+        <button type="button" class="vote-like ${likeClass}" onclick="event.stopPropagation(); voteImage(${imageId}, 'like');" title="Me gusta">
+            <i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">${likeCount}</span>
+        </button>
+        <button type="button" class="vote-dislike ${dislikeClass}" onclick="event.stopPropagation(); voteImage(${imageId}, 'dislike');" title="No me gusta">
+            <i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">${dislikeCount}</span>
+        </button>
+    </div>`;
+}
+
+function updateAllVoteBars(imageId, likeCount, dislikeCount, userVote) {
+    document.querySelectorAll(`.vote-overlay[data-image-id="${imageId}"]`).forEach(bar => {
+        bar.dataset.like = likeCount;
+        bar.dataset.dislike = dislikeCount;
+        bar.dataset.userVote = userVote || '';
+        const likeBtn = bar.querySelector('.vote-like');
+        const dislikeBtn = bar.querySelector('.vote-dislike');
+        if (likeBtn) {
+            likeBtn.classList.toggle('voted-like', userVote === 'like');
+            const c = likeBtn.querySelector('.like-count');
+            if (c) c.textContent = likeCount;
+        }
+        if (dislikeBtn) {
+            dislikeBtn.classList.toggle('voted-dislike', userVote === 'dislike');
+            const c = dislikeBtn.querySelector('.dislike-count');
+            if (c) c.textContent = dislikeCount;
+        }
+    });
+}
+
+function voteImage(imageId, voteType) {
+    if (!window.isVoteModerator) {
+        alert('Solo moderadoras pueden votar');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('vote_type', voteType);
+    fetch('/image/' + imageId + '/vote', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                updateAllVoteBars(imageId, d.like_count, d.dislike_count, d.user_vote);
+            } else {
+                alert(d.error || 'Error al votar');
+            }
+        })
+        .catch(() => alert('Error al votar'));
+}
+
+function openMediaVoteModal(imageId, url, filename, type, download, likeCount, dislikeCount, userVote) {
+    if (!imageId) return;
+    filename = filename || 'Archivo';
+    likeCount = likeCount || 0;
+    dislikeCount = dislikeCount || 0;
+    let mediaHtml = '';
+    if (type === 'video') {
+        mediaHtml = `<video src="${url}" controls autoplay muted loop style="max-width:100%;max-height:70vh;border-radius:12px;display:block;margin:0 auto;"></video>`;
+    } else if (type === 'audio') {
+        mediaHtml = `<div style="font-size:3rem;">🎵</div><audio src="${url}" controls style="width:80%;margin:20px auto;display:block;"></audio>`;
+    } else {
+        mediaHtml = `<img src="${url}" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;display:block;margin:0 auto;" alt="${filename}">`;
+    }
+    const overlay = makeVoteOverlayHTML(imageId, likeCount, dislikeCount, userVote);
+    const modal = document.createElement('div');
+    modal.className = 'media-vote-modal';
+    modal.innerHTML = `
+        <div class="media-vote-body">
+            <div class="media-vote-info">
+                <p style="margin:0 0 8px;">${filename}</p>
+                <a href="${download}" download class="btn btn-danger btn-sm rounded-pill">⬇ Descargar original</a>
+            </div>
+            ${mediaHtml}
+            <div style="margin-top:12px;">${overlay}</div>
+        </div>
+    `;
+    modal.onclick = (e) => { if (e.target === modal) document.body.removeChild(modal); };
+    document.body.appendChild(modal);
+}
 </script>
 </body>
 </html>

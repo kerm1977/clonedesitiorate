@@ -1,0 +1,126 @@
+{% if files %}
+<div class="row g-3" id="coleccionGrid">
+    {% for f in files %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:16px; overflow:hidden; position:relative;">
+            {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
+            <a href="{{ f.download_url }}" download
+               style="position:absolute; top:8px; right:8px; z-index:10; width:36px; height:36px; border-radius:50%;
+                      background:rgba(255,255,255,0.9); box-shadow:0 2px 8px rgba(0,0,0,0.2);
+                      display:flex; align-items:center; justify-content:center; color:#dc3545; font-size:1.1rem; text-decoration:none;"
+               title="Descargar" onclick="event.stopPropagation();">
+                ⬇
+            </a>
+            {% endif %}
+            {% if f.type == 'video' %}
+            <div class="w-100"
+                 data-image-id="{{ f.image_id }}"
+                 data-view-url="{{ f.view_url }}"
+                 data-download="{{ f.download_url }}"
+                 data-filename="{{ f.name }}"
+                 data-type="video"
+                 data-like-count="{{ f.like_count or 0 }}"
+                 data-dislike-count="{{ f.dislike_count or 0 }}"
+                 data-user-vote="{{ f.user_vote or '' }}"
+                 style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
+                 onclick="openMediaVoteModal(Number(this.dataset.imageId), this.dataset.viewUrl, this.dataset.filename, this.dataset.type, this.dataset.download, this.dataset.likeCount, this.dataset.dislikeCount, this.dataset.userVote)">
+                {% if f.thumb %}
+                <img src="{{ f.thumb }}" class="w-100" style="height:180px; object-fit:cover; pointer-events:none;">
+                {% else %}
+                <div style="height:180px; background:#f8f0f5; display:flex; align-items:center; justify-content:center;">
+                    <div style="font-size:2.5rem;">🎬</div>
+                </div>
+                {% endif %}
+                {% if f.image_id and is_moderator %}
+                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-dislike="{{ f.dislike_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
+                    <button type="button" class="vote-like {{ 'voted-like' if f.user_vote == 'like' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ f.like_count or 0 }}</span></button>
+                    <button type="button" class="vote-dislike {{ 'voted-dislike' if f.user_vote == 'dislike' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'dislike');" title="No me gusta"><i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">{{ f.dislike_count or 0 }}</span></button>
+                </div>
+                {% endif %}
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4); pointer-events:none;">▶</div>
+            </div>
+            {% else %}
+            <div style="position:relative; height:180px; overflow:hidden;">
+                <img src="{% if f.thumb %}{{ f.thumb }}{% else %}{{ f.low_url or f.view_url }}{% endif %}"
+                     data-image-id="{{ f.image_id }}"
+                     data-view-url="{{ f.view_url }}"
+                     data-download="{{ f.download_url }}"
+                     data-filename="{{ f.name }}"
+                     data-type="image"
+                     data-like-count="{{ f.like_count or 0 }}"
+                     data-dislike-count="{{ f.dislike_count or 0 }}"
+                     data-user-vote="{{ f.user_vote or '' }}"
+                     class="w-100" style="height:180px; object-fit:cover; cursor:pointer;"
+                     alt="{{ f.name }}"
+                     onclick="openMediaVoteModal(Number(this.dataset.imageId), this.dataset.viewUrl, this.dataset.filename, this.dataset.type, this.dataset.download, this.dataset.likeCount, this.dataset.dislikeCount, this.dataset.userVote)">
+                {% if f.image_id and is_moderator %}
+                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-dislike="{{ f.dislike_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
+                    <button type="button" class="vote-like {{ 'voted-like' if f.user_vote == 'like' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ f.like_count or 0 }}</span></button>
+                    <button type="button" class="vote-dislike {{ 'voted-dislike' if f.user_vote == 'dislike' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'dislike');" title="No me gusta"><i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">{{ f.dislike_count or 0 }}</span></button>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            <div class="card-body p-2 text-center">
+                <small class="text-muted text-truncate d-block" style="font-size:0.75rem;" title="{{ f.name }}">{{ f.name }}</small>
+
+                {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
+                <div class="mt-2 text-start">
+                    <p class="text-muted mb-1" style="font-size:0.7rem;"><i class="bi bi-chat-dots me-1"></i>Ahora puedes opinar sobre esta imagen y compartir tu pensar con las moderadoras</p>
+                    <form action="{{ url_for('coleccion.save_opinion') }}" method="POST" class="d-flex flex-column gap-1">
+                        <input type="hidden" name="filename" value="{{ f.name }}">
+                        <input type="text" name="opinion" class="form-control form-control-sm" placeholder="¿Qué piensas de {{ f.name }}?" required style="font-size:0.75rem;">
+                        <button type="submit" class="btn btn-sm" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;border-radius:8px;font-size:0.7rem;">Enviar opinión</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if f.opinions %}
+                <div class="mt-2 text-start" style="max-height:160px; overflow-y:auto;">
+                    {% for op in f.opinions %}
+                    <div class="small p-2 mb-1" style="background:#f8f0f5;border-radius:6px;font-size:0.75rem;word-wrap:break-word;">
+                        <strong>{{ op.username }}:</strong>
+                        <div id="opinionText{{ op.id }}" class="mt-1">{{ op.opinion }}</div>
+                        {% if (current_user.is_superuser or current_user.username == op.username) %}
+                        <form id="editForm{{ op.id }}" action="{{ url_for('coleccion.edit_opinion', opinion_id=op.id) }}" method="POST" style="display:none;">
+                            <textarea name="opinion" class="form-control form-control-sm mt-1" rows="2" style="font-size:0.75rem;resize:vertical;">{{ op.opinion }}</textarea>
+                            <div class="d-flex gap-1 mt-1">
+                                <button type="submit" class="btn btn-sm py-0 px-1" style="background:#20c997;color:#fff;font-size:0.65rem;border:none;border-radius:4px;">Guardar</button>
+                                <button type="button" class="btn btn-sm py-0 px-1" style="background:#6c757d;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="toggleEditOpinion({{ op.id }}, false)">Cancelar</button>
+                            </div>
+                        </form>
+                        <div class="d-flex gap-1 mt-1">
+                            <button type="button" id="editBtn{{ op.id }}" class="btn btn-sm py-0 px-1" style="background:#20c997;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="toggleEditOpinion({{ op.id }}, true)">Editar</button>
+                            <form action="{{ url_for('coleccion.delete_opinion', opinion_id=op.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm py-0 px-1" style="background:#dc3545;color:#fff;font-size:0.65rem;border:none;border-radius:4px;" onclick="return confirm('¿Eliminar?')">Borrar</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                        <span class="text-muted d-block mt-1" style="font-size:0.6rem;">{{ op.created_at.strftime('%d/%m %H:%M') }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted" id="coleccionGrid">
+    <p>No se encontraron imágenes ni videos en la colección.</p>
+</div>
+{% endif %}
+{% if total_pages > 1 %}
+<nav aria-label="Página de colección" class="my-4" id="coleccionPagination">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not has_prev %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}">Anterior</a>
+        </li>
+        <li class="page-item active"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+        <li class="page-item {% if not has_next %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}">Siguiente</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
