@@ -1,7 +1,8 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, make_response
 from flask_login import current_user
-from models import db, Image, Favorite, FinalFeedback, AppConfig, WeeklyStoryComment, StoryComment, CommentRead, ImageComment, Message, ImageQuestion
+from models import db, Image, Favorite, FinalFeedback, AppConfig, WeeklyStoryComment, StoryComment, CommentRead, ImageComment, Message, ImageQuestion, ImageVote
 from utils import get_session_id
+from sqlalchemy import func
 
 
 def register_game_routes(bp):
@@ -44,6 +45,16 @@ def register_game_routes(bp):
             page=page, per_page=per_page, error_out=False
         )
         
+        user_id = current_user.id if current_user.is_authenticated else None
+        image_ids = [img.id for img in images.items]
+        vote_counts = {}
+        for row in db.session.query(ImageVote.image_id, ImageVote.vote_type, func.count(ImageVote.id)).filter(ImageVote.image_id.in_(image_ids)).group_by(ImageVote.image_id, ImageVote.vote_type).all():
+            vote_counts.setdefault(row[0], {})[row[1]] = row[2]
+        user_votes = {}
+        if user_id:
+            for v in ImageVote.query.filter(ImageVote.image_id.in_(image_ids), ImageVote.user_id == user_id).all():
+                user_votes[v.image_id] = v.vote_type
+
         result = {
             'images': [{
                 'id': img.id,
@@ -51,7 +62,10 @@ def register_game_routes(bp):
                 'thumb_url': url_for('game.serve_thumbnail', image_id=img.id) if not img.is_video else url_for('game.serve_image', image_id=img.id),
                 'download_url': url_for('game.download_image', image_id=img.id),
                 'filename': img.filename,
-                'is_video': img.is_video
+                'is_video': img.is_video,
+                'like_count': vote_counts.get(img.id, {}).get('like', 0),
+                'dislike_count': vote_counts.get(img.id, {}).get('dislike', 0),
+                'user_vote': user_votes.get(img.id)
             } for img in images.items],
             'has_more': images.has_next,
             'has_prev': images.has_prev,

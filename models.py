@@ -17,7 +17,8 @@ class Image(db.Model):
     active=db.Column(db.Boolean,default=True)
     has_confetti=db.Column(db.Boolean,default=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
-    
+    votes=db.relationship('ImageVote',backref='image',lazy=True,cascade='all, delete-orphan')
+
     @property
     def is_video(self):
         video_extensions = ('.mp4', '.webm', '.mov', '.avi', '.mkv', '.wmv', '.m4v', '.h264', '.264', '.mpeg', '.mpg', '.3gp', '.ts')
@@ -224,6 +225,15 @@ class DeletedImage(db.Model):
     deleted_by_user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True)
     deleted_at=db.Column(db.DateTime,default=datetime.utcnow)
     deleted_by=db.relationship('User',backref='deleted_images')
+
+class ImageVote(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    image_id=db.Column(db.Integer,db.ForeignKey('image.id'),nullable=False,index=True)
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False,index=True)
+    vote_type=db.Column(db.String(10),nullable=False)  # 'like' o 'dislike'
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    __table_args__=(db.UniqueConstraint('image_id','user_id'),)
+    user=db.relationship('User',backref='image_votes')
 
 class ActivityLog(db.Model):
     id=db.Column(db.Integer,primary_key=True)

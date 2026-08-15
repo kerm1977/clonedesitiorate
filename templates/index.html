@@ -84,6 +84,47 @@
     transform: scale(1.2);
     color: #7dd3fc;
 }
+.vote-bar {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    background: rgba(0,0,0,0.45);
+    border-radius: 20px;
+    padding: 4px 8px;
+    align-items: center;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    backdrop-filter: blur(3px);
+}
+.vote-bar button {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 2px 4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    transition: transform 0.15s, color 0.15s;
+}
+.vote-bar button:hover {
+    transform: scale(1.15);
+}
+.vote-bar button.voted-like {
+    color: #28e98c;
+}
+.vote-bar button.voted-dislike {
+    color: #ff6b6b;
+}
+.vote-bar .vote-count {
+    font-size: 0.85rem;
+    min-width: 14px;
+    text-align: center;
+}
 .back-to-top {
     position: fixed;
     bottom: 30px;
@@ -123,7 +164,8 @@
     <!-- Pinterest Grid -->
     <div class="pinterest-grid" id="imageGrid">
         {% for image in images %}
-        <div class="pinterest-item" data-image-id="{{ image.id }}" data-filename="{{ image.filename }}" data-dl="{{ url_for('game.download_image', image_id=image.id) }}" data-is-video="{{ 'true' if image.is_video else 'false' }}">
+        <div class="pinterest-item" data-image-id="{{ image.id }}" data-filename="{{ image.filename }}" data-dl="{{ url_for('game.download_image', image_id=image.id) }}" data-is-video="{{ 'true' if image.is_video else 'false' }}"
+             data-like-count="0" data-dislike-count="0" data-user-vote="">
             <button class="heart-btn" onclick="event.stopPropagation(); showFavoritesRemovedModal();" title="Sistema de favoritos eliminado">
                 <i class="bi bi-heart"></i>
             </button>
@@ -131,6 +173,17 @@
             <button class="share-chat-btn" onclick="shareImageToChat({{ image.id }}, this)" title="Compartir en chat">
                 <i class="bi bi-share"></i>
             </button>
+            {% endif %}
+            {% set is_moderator = current_user.is_authenticated and (current_user.username in ['nita','lausita','nitalaosita'] or current_user.is_superuser) %}
+            {% if is_moderator %}
+            <div class="vote-bar" data-vote-bar="{{ image.id }}">
+                <button class="vote-like" onclick="event.stopPropagation(); voteImage({{ image.id }}, 'like')" title="Me gusta">
+                    <i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">0</span>
+                </button>
+                <button class="vote-dislike" onclick="event.stopPropagation(); voteImage({{ image.id }}, 'dislike')" title="No me gusta">
+                    <i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">0</span>
+                </button>
+            </div>
             {% endif %}
             {% if image.is_video %}
             <video src="{{ url_for('game.serve_image', image_id=image.id) }}"
@@ -265,6 +318,67 @@ document.getElementById('imageModal').addEventListener('hidden.bs.modal', functi
 <script src="{{ url_for('static', filename='js/app.min.js') }}?v=16"></script>
 <script>
 let currentPage = {{ page }};
+const currentUsername = '{{ current_user.username if current_user.is_authenticated else "" }}';
+const isModerator = currentUsername === 'nitalaosita' || currentUsername === 'nita' || currentUsername === 'lausita' ||
+                    '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
+
+function updateVoteBar(imageId, likeCount, dislikeCount, userVote) {
+    const bar = document.querySelector('.vote-bar[data-vote-bar="' + imageId + '"]');
+    if (!bar) return;
+    const likeBtn = bar.querySelector('.vote-like');
+    const dislikeBtn = bar.querySelector('.vote-dislike');
+    likeBtn.querySelector('.like-count').textContent = likeCount;
+    dislikeBtn.querySelector('.dislike-count').textContent = dislikeCount;
+    likeBtn.classList.toggle('voted-like', userVote === 'like');
+    dislikeBtn.classList.toggle('voted-dislike', userVote === 'dislike');
+    const item = document.querySelector('.pinterest-item[data-image-id="' + imageId + '"]');
+    if (item) {
+        item.dataset.likeCount = likeCount;
+        item.dataset.dislikeCount = dislikeCount;
+        item.dataset.userVote = userVote || '';
+    }
+}
+
+function createVoteBar(imageId, likeCount, dislikeCount, userVote) {
+    const bar = document.createElement('div');
+    bar.className = 'vote-bar';
+    bar.dataset.voteBar = imageId;
+
+    const likeBtn = document.createElement('button');
+    likeBtn.className = 'vote-like' + (userVote === 'like' ? ' voted-like' : '');
+    likeBtn.title = 'Me gusta';
+    likeBtn.innerHTML = '<i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">' + likeCount + '</span>';
+    likeBtn.onclick = function(e) { e.stopPropagation(); voteImage(imageId, 'like'); };
+
+    const dislikeBtn = document.createElement('button');
+    dislikeBtn.className = 'vote-dislike' + (userVote === 'dislike' ? ' voted-dislike' : '');
+    dislikeBtn.title = 'No me gusta';
+    dislikeBtn.innerHTML = '<i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">' + dislikeCount + '</span>';
+    dislikeBtn.onclick = function(e) { e.stopPropagation(); voteImage(imageId, 'dislike'); };
+
+    bar.appendChild(likeBtn);
+    bar.appendChild(dislikeBtn);
+    return bar;
+}
+
+function voteImage(imageId, voteType) {
+    if (!isModerator) {
+        alert('Solo moderadoras pueden votar');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('vote_type', voteType);
+    fetch('/image/' + imageId + '/vote', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                updateVoteBar(imageId, d.like_count, d.dislike_count, d.user_vote);
+            } else {
+                alert(d.error || 'Error al votar');
+            }
+        })
+        .catch(() => alert('Error al votar'));
+}
 
 function showFavoritesRemovedModal() {
     new bootstrap.Modal(document.getElementById('favoritesRemovedModal')).show();
@@ -392,7 +506,10 @@ function loadPage(page) {
                 item.dataset.filename = img.filename;
                 item.dataset.dl = img.download_url;
                 item.dataset.isVideo = img.is_video ? 'true' : 'false';
-                
+                item.dataset.likeCount = img.like_count || 0;
+                item.dataset.dislikeCount = img.dislike_count || 0;
+                item.dataset.userVote = img.user_vote || '';
+
                 const favBtn = document.createElement('button');
                 favBtn.className = 'heart-btn';
                 favBtn.onclick = function(e) {
@@ -401,8 +518,9 @@ function loadPage(page) {
                 };
                 favBtn.title = 'Sistema de favoritos eliminado';
                 favBtn.innerHTML = '<i class="bi bi-heart"></i>';
-                
-                const isNita = '{{ current_user.username if current_user.is_authenticated else "" }}' === 'nitalaosita';
+
+                const isNita = currentUsername === 'nitalaosita';
+                const isLausita = currentUsername === 'lausita';
                 const isSuperuser = '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
                 let shareBtn = null;
                 if (isNita || isSuperuser) {
@@ -415,7 +533,7 @@ function loadPage(page) {
                         shareImageToChat(img.id, this);
                     };
                 }
-                
+
                 if (img.is_video) {
                     const video = document.createElement('video');
                     video.src = img.url;
@@ -426,6 +544,9 @@ function loadPage(page) {
                     video.onclick = function() { openImageModal(img.id); };
                     video.onloadeddata = function() { item.classList.add('loaded'); };
                     item.appendChild(favBtn);
+                    if (isModerator) {
+                        item.appendChild(createVoteBar(img.id, img.like_count || 0, img.dislike_count || 0, img.user_vote));
+                    }
                     item.appendChild(video);
                 } else {
                     const imgEl = document.createElement('img');
@@ -438,9 +559,12 @@ function loadPage(page) {
                     imgEl.onload = function() { item.classList.add('loaded'); };
                     item.appendChild(favBtn);
                     if (shareBtn) item.appendChild(shareBtn);
+                    if (isModerator) {
+                        item.appendChild(createVoteBar(img.id, img.like_count || 0, img.dislike_count || 0, img.user_vote));
+                    }
                     item.appendChild(imgEl);
                 }
-                
+
                 grid.appendChild(item);
             });
             

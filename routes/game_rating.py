@@ -1,12 +1,64 @@
 from flask import request, jsonify, url_for
-from models import db, Message, Favorite, ImageQuestion, ImageQuestionResponse, ScheduledUserMessage, Image, ImageComment, DeletedImage, CommentLike
+from models import db, Message, Favorite, ImageQuestion, ImageQuestionResponse, ScheduledUserMessage, Image, ImageComment, DeletedImage, CommentLike, ImageVote
 from utils import get_session_id, log_activity
+from sqlalchemy import func
 from datetime import datetime
 from flask_login import current_user, login_required
 
 
+def _is_moderator():
+    """Devuelve True si el usuario actual es Nita/Lausita o superusuario."""
+    if not current_user.is_authenticated:
+        return False
+    return current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
+
+
+def _get_image_vote_counts(image_id):
+    """Devuelve (like_count, dislike_count, user_vote) para la imagen dada."""
+    like_count = ImageVote.query.filter_by(image_id=image_id, vote_type='like').count()
+    dislike_count = ImageVote.query.filter_by(image_id=image_id, vote_type='dislike').count()
+    user_vote = None
+    if current_user.is_authenticated:
+        vote = ImageVote.query.filter_by(image_id=image_id, user_id=current_user.id).first()
+        if vote:
+            user_vote = vote.vote_type
+    return like_count, dislike_count, user_vote
+
+
 def register_game_rating_routes(bp):
     
+
+    @bp.route('/image/<int:image_id>/vote', methods=['POST'])
+    @login_required
+    def vote_image(image_id):
+        if not _is_moderator():
+            return jsonify({'error': 'Solo moderadoras pueden votar'}), 403
+        vote_type = request.form.get('vote_type', '').strip().lower()
+        if vote_type not in ('like', 'dislike'):
+            return jsonify({'error': 'Voto inválido'}), 400
+        img = Image.query.get_or_404(image_id)
+        existing = ImageVote.query.filter_by(image_id=img.id, user_id=current_user.id).first()
+        if existing:
+            if existing.vote_type == vote_type:
+                # Si repite el mismo voto, lo elimina (toggle)
+                db.session.delete(existing)
+            else:
+                existing.vote_type = vote_type
+        else:
+            db.session.add(ImageVote(image_id=img.id, user_id=current_user.id, vote_type=vote_type))
+        db.session.commit()
+
+        like_count, dislike_count, user_vote = _get_image_vote_counts(img.id)
+        log_activity(current_user.username, vote_type, 'image', img.filename,
+                     object_url=url_for('game.view_image', image_id=img.id),
+                     object_id=img.id)
+        return jsonify({
+            'success': True,
+            'like_count': like_count,
+            'dislike_count': dislike_count,
+            'user_vote': user_vote
+        })
+
 
     @bp.route('/image/<int:image_id>/toggle-confetti', methods=['POST'])
     @login_required
