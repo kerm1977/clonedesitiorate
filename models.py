@@ -245,3 +245,12 @@ class ActivityLog(db.Model):
     object_url=db.Column(db.String(500),nullable=True)
     extra=db.Column(db.Text,nullable=True)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
+
+class ImageDownload(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    image_id=db.Column(db.Integer,db.ForeignKey('image.id'),nullable=False,index=True)
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True,index=True)
+    user_session=db.Column(db.String(100),nullable=True)
+    username=db.Column(db.String(100),nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    image=db.relationship('Image',backref='downloads')

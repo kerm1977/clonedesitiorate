@@ -5,7 +5,7 @@ import hashlib
 import random
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, CollectionOpinion, User, Image, ImageVote
+from models import db, CollectionOpinion, User, Image, ImageVote, ImageDownload
 from utils import log_activity
 
 coleccion_bp = Blueprint('coleccion', __name__, url_prefix='/coleccion')
@@ -177,6 +177,7 @@ def index():
             f['image_id'] = img.id
             f['like_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
             f['dislike_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
+            f['download_count'] = ImageDownload.query.filter_by(image_id=img.id).count()
             user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=user_id).first()
             f['user_vote'] = user_vote.vote_type if user_vote else None
             f['view_url'] = url_for('game.serve_image', image_id=img.id) if f.get('from_game') else f['view_url']
@@ -262,6 +263,11 @@ def serve_file(filename):
         if request.args.get('download'):
             log_activity(current_user.username, 'download', 'collection_file', filename,
                          object_url=url_for('coleccion.serve_file', filename=filename, download=1))
+            img = Image.query.filter_by(filepath=full_path).first()
+            if img:
+                db.session.add(ImageDownload(image_id=img.id, user_id=current_user.id,
+                                             username=current_user.username))
+                db.session.commit()
             return send_file(full_path, mimetype=mtype, as_attachment=True, conditional=True)
         return send_file(full_path, mimetype=mtype, conditional=True)
     # Fallback a archivos de la galería

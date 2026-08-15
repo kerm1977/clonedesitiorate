@@ -1,6 +1,6 @@
 from flask import render_template, send_file, redirect, url_for, jsonify, request
 from flask_login import login_required, current_user
-from models import db, Image
+from models import db, Image, ImageDownload
 from utils import log_activity
 import os
 import io
@@ -71,10 +71,12 @@ def register_game_images_routes(bp):
         from models import ImageVote
         like_count = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
         dislike_count = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
+        download_count = ImageDownload.query.filter_by(image_id=img.id).count()
         user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=current_user.id).first()
         is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
         return render_template('view_image.html', image=img, like_count=like_count,
-                               dislike_count=dislike_count, user_vote=user_vote.vote_type if user_vote else None,
+                               dislike_count=dislike_count, download_count=download_count,
+                               user_vote=user_vote.vote_type if user_vote else None,
                                is_moderator=is_moderator)
 
     @bp.route('/img/<int:image_id>')
@@ -159,6 +161,9 @@ def register_game_images_routes(bp):
         log_activity(current_user.username, 'download', 'image', img.filename,
                      object_url=url_for('game.serve_image', image_id=img.id),
                      object_id=img.id)
+        db.session.add(ImageDownload(image_id=img.id, user_id=current_user.id,
+                                     username=current_user.username))
+        db.session.commit()
         return send_file(img.filepath, as_attachment=True, download_name=img.filename, conditional=True)
 
     @bp.route('/search-folder')

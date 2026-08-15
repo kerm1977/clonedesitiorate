@@ -586,11 +586,13 @@ def nita_activity_history():
 
     likes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'like').order_by(ActivityLog.created_at.desc()).limit(200).all()
     dislikes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'dislike').order_by(ActivityLog.created_at.desc()).limit(200).all()
-    other = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ~ActivityLog.action.in_(('like','dislike'))).order_by(ActivityLog.created_at.desc()).limit(100).all()
+    downloads = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'download').order_by(ActivityLog.created_at.desc()).limit(200).all()
+    other = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ~ActivityLog.action.in_(('like','dislike','download'))).order_by(ActivityLog.created_at.desc()).limit(100).all()
 
     return render_template('nita_activity.html',
                            likes=[_format(log) for log in likes],
                            dislikes=[_format(log) for log in dislikes],
+                           downloads=[_format(log) for log in downloads],
                            other_entries=[_format(log) for log in other])
 
 

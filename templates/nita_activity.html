@@ -81,6 +81,17 @@
         </div>
     </div>
 
+    {% if downloads %}
+    <div class="card bg-dark text-white border-info mt-4">
+        <div class="card-header border-0 fw-bold">
+            <i class="bi bi-download me-2"></i>Imágenes/videos descargados
+        </div>
+        <div class="card-body p-0">
+            {{ activity_list(downloads, 'No hay descargas registradas aún.') }}
+        </div>
+    </div>
+    {% endif %}
+
     {% if other_entries %}
     <div class="card bg-dark text-white border-secondary mt-4">
         <div class="card-header border-0">

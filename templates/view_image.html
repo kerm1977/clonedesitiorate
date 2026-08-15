@@ -7,7 +7,12 @@
         <div class="col-12 col-md-10 col-lg-8">
             <div class="card bg-dark">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ image.filename }}</h5>
+                    <div>
+                        <h5 class="mb-0">{{ image.filename }}</h5>
+                        <span class="badge bg-info text-dark mt-1">
+                            <i class="bi bi-download me-1"></i>{{ download_count or 0 }} descargas
+                        </span>
+                    </div>
                     <a href="{{ url_for('admin.admin') }}#tabVotaciones" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-arrow-left"></i> Volver
                     </a>

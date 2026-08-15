@@ -63,6 +63,9 @@
             {% endif %}
             <div class="card-body p-2 text-center">
                 <small class="text-muted text-truncate d-block" style="font-size:0.75rem;" title="{{ f.name }}">{{ f.name }}</small>
+                <span class="badge bg-info text-dark mt-1" style="font-size:0.65rem;">
+                    <i class="bi bi-download me-1"></i>{{ f.download_count or 0 }}
+                </span>
 
                 {% if current_user.username == 'nitalaosita' or current_user.is_superuser %}
                 <div class="mt-2 text-start">
