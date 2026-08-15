@@ -9,35 +9,36 @@ $LogFile    = Join-Path $ProjectDir "server.log"
 
 Set-Location $ProjectDir
 
+# Leer puerto desde config.json (default 8090 para no chocar con plantillaFlask2026)
+$Port = 8090
+$ConfigFile = Join-Path $ProjectDir "config.json"
+if (Test-Path $ConfigFile) {
+    try {
+        $cfg = Get-Content $ConfigFile -Raw | ConvertFrom-Json
+        if ($cfg.port) { $Port = [int]$cfg.port }
+    } catch {}
+}
+
 function Log($msg) {
     $line = "[$(Get-Date)] $msg"
     Add-Content -Path $LogFile -Value $line
     Write-Host $line
 }
 
-# --- 1) Matar cualquier proceso viejo/conflictivo (local) ---
-Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -and (
-        $_.CommandLine -match 'app\.py' -or
-        $_.CommandLine -match 'start_photobear' -or
-        $_.CommandLine -match 'IniciarPhotoBearRate' -or
-        $_.CommandLine -match 'photobear_watchdog'
-    ) -and $_.ProcessId -ne $PID
-} | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-
-Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+# --- 1) Matar SOLO procesos que usen nuestro puerto (NO tocar plantillaFlask2026) ---
+Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
 
 Start-Sleep -Milliseconds 500
 
-# --- 2) Asegurar Tailscale Funnel activo (remoto/global) ---
+# --- 2) Asegurar Tailscale Funnel activo solo para nuestro puerto ---
 try {
     $funnelStatus = (tailscale funnel status 2>&1 | Out-String)
-    if ($funnelStatus -notmatch 'Funnel on') {
-        Log "Funnel no estaba activo. Activando..."
-        tailscale funnel 8080 | Out-Null
+    if ($funnelStatus -notmatch ":$Port") {
+        Log "Activando Tailscale Funnel en puerto $Port..."
+        tailscale funnel $Port | Out-Null
     } else {
-        Log "Tailscale Funnel ya estaba activo."
+        Log "Tailscale Funnel ya activo en puerto $Port."
     }
 } catch {
     Log "No se pudo verificar/activar Tailscale Funnel: $_"
@@ -55,10 +56,10 @@ if (-not $createdNew) {
 # --- 4) Loop indestructible: si el servidor cae, se reinicia solo ---
 try {
     while ($true) {
-        Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+        Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
             ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
 
-        Log "Iniciando PhotoBearRate..."
+        Log "Iniciando PhotoBearRate en puerto $Port..."
         $proc = Start-Process -FilePath $PythonExe -ArgumentList '"app.py"' `
             -WorkingDirectory $ProjectDir -PassThru -NoNewWindow `
             -RedirectStandardOutput (Join-Path $ProjectDir "server_stdout.log") `
