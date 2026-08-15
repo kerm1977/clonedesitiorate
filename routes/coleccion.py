@@ -130,6 +130,53 @@ def index():
                 'is_video': False
             })
 
+    user_id = current_user.id
+    is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
+
+    # Precarga de imagenes de coleccion para evitar N+1
+    collection_paths = [os.path.join(COLECCION_FOLDER, f['name']) for f in files if not f.get('from_game')]
+    collection_images = {img.filepath: img for img in Image.query.filter(Image.filepath.in_(collection_paths)).all()}
+    new_images = []
+    for full_path in collection_paths:
+        if full_path not in collection_images and os.path.isfile(full_path):
+            name = os.path.basename(full_path)
+            img = Image(filename=name, filepath=full_path, folder=COLECCION_FOLDER, active=False)
+            new_images.append(img)
+            collection_images[full_path] = img
+    if new_images:
+        db.session.add_all(new_images)
+        db.session.commit()
+
+    # Opiniones por lote
+    collection_filenames = [f['name'] for f in files if not f.get('from_game')]
+    opinions_by_filename = {}
+    for op in CollectionOpinion.query.filter(CollectionOpinion.filename.in_(collection_filenames)).order_by(CollectionOpinion.created_at.desc()).all():
+        opinions_by_filename.setdefault(op.filename, []).append(op)
+
+    # Votos y descargas por lote
+    image_ids = set(f['game_id'] for f in files if f.get('from_game') and f.get('game_id'))
+    for full_path, img in collection_images.items():
+        image_ids.add(img.id)
+
+    likes_by_id = {}
+    dislikes_by_id = {}
+    if image_ids:
+        vote_counts = db.session.query(ImageVote.image_id, ImageVote.vote_type, db.func.count()).\
+            filter(ImageVote.image_id.in_(image_ids)).\
+            group_by(ImageVote.image_id, ImageVote.vote_type).all()
+        for iid, vtype, cnt in vote_counts:
+            if vtype == 'like':
+                likes_by_id[iid] = cnt
+            elif vtype == 'dislike':
+                dislikes_by_id[iid] = cnt
+        user_votes = {v.image_id: v.vote_type for v in ImageVote.query.filter(ImageVote.image_id.in_(image_ids), ImageVote.user_id == user_id).all()}
+        downloads_by_id = dict(db.session.query(ImageDownload.image_id, db.func.count()).\
+            filter(ImageDownload.image_id.in_(image_ids)).\
+            group_by(ImageDownload.image_id).all())
+    else:
+        user_votes = {}
+        downloads_by_id = {}
+
     for f in files:
         if f.get('from_game'):
             f['thumb'] = url_for('game.serve_thumbnail', image_id=f['game_id'])
@@ -137,6 +184,8 @@ def index():
             f['low_url'] = url_for('game.serve_low_image', image_id=f['game_id']) if not f['is_video'] else None
             f['download_url'] = url_for('game.download_image', image_id=f['game_id'])
             f['share_url'] = url_for('game.download_image', image_id=f['game_id'], _external=True)
+            f['opinions'] = []
+            img_id = f['game_id']
         else:
             full_path = os.path.join(COLECCION_FOLDER, f['name'])
             if f['type'] == 'video':
@@ -150,37 +199,23 @@ def index():
             f['low_url'] = url_for('coleccion.serve_low', filename=f['name']) if f['type'] == 'image' else None
             f['download_url'] = url_for('coleccion.serve_file', filename=f['name'], download='1')
             f['share_url'] = url_for('coleccion.serve_file', filename=f['name'], download='1', _external=True)
+            all_opinions = opinions_by_filename.get(f['name'], [])
+            if is_superuser:
+                f['opinions'] = all_opinions
+            elif is_nita:
+                f['opinions'] = [op for op in all_opinions if op.username in superuser_usernames or op.username == current_user.username]
+            else:
+                f['opinions'] = [op for op in all_opinions if op.username == current_user.username]
+            img = collection_images.get(full_path)
+            img_id = img.id if img else None
 
-        all_opinions = CollectionOpinion.query.filter_by(filename=f['name']).order_by(CollectionOpinion.created_at.desc()).all()
-        if f.get('from_game'):
-            f['opinions'] = []
-        elif is_superuser:
-            f['opinions'] = all_opinions
-        elif is_nita:
-            f['opinions'] = [op for op in all_opinions if op.username in superuser_usernames or op.username == current_user.username]
-        else:
-            f['opinions'] = [op for op in all_opinions if op.username == current_user.username]
-
-    user_id = current_user.id
-    is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
-    for f in files:
-        if f.get('from_game'):
-            img = Image.query.get(f['game_id'])
-        else:
-            full_path = os.path.join(COLECCION_FOLDER, f['name'])
-            img = Image.query.filter_by(filepath=full_path).first()
-            if not img and os.path.isfile(full_path):
-                img = Image(filename=f['name'], filepath=full_path, folder=COLECCION_FOLDER, active=False)
-                db.session.add(img)
-                db.session.commit()
-        if img:
-            f['image_id'] = img.id
-            f['like_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
-            f['dislike_count'] = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
-            f['download_count'] = ImageDownload.query.filter_by(image_id=img.id).count()
-            user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=user_id).first()
-            f['user_vote'] = user_vote.vote_type if user_vote else None
-            f['view_url'] = url_for('game.serve_image', image_id=img.id) if f.get('from_game') else f['view_url']
+        if img_id:
+            f['image_id'] = img_id
+            f['like_count'] = likes_by_id.get(img_id, 0)
+            f['dislike_count'] = dislikes_by_id.get(img_id, 0)
+            f['download_count'] = downloads_by_id.get(img_id, 0)
+            f['user_vote'] = user_votes.get(img_id)
+            f['view_url'] = url_for('game.serve_image', image_id=img_id) if f.get('from_game') else f['view_url']
         f['is_moderator'] = is_moderator
 
     filter_type = request.args.get('filter', 'all')

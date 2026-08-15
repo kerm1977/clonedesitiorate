@@ -37,7 +37,7 @@ def create_app():
 
     db.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet',
-                      ping_timeout=5, ping_interval=1)
+                      ping_timeout=60, ping_interval=1)
 
     @app.teardown_appcontext
     def _close_db(exc):
