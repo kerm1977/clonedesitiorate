@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
 from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage
+from chat_socket import _user_sids
 from datetime import datetime, timedelta
 import json
 import os
@@ -93,7 +94,10 @@ def admin():
     # Obtener log de compresión si existe
     compress_log = session.pop('compress_log', None)
     
+    nita_online = 'nitalaosita' in _user_sids or 'nita' in _user_sids
+
     return render_template('admin.html',
+        nita_online=nita_online,
         messages=Message.query.order_by(Message.created_at.desc()).all(),
         about=AboutContent.query.first(),
         images=Image.query.order_by(Image.created_at.desc()).all(),
