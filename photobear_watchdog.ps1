@@ -46,7 +46,7 @@ try {
 
 # --- 3) Mutex de instancia unica: garantiza que nunca hayan dos watchdogs ---
 $createdNew = $false
-$mutex = New-Object System.Threading.Mutex($false, "Global\PhotoBearWatchdogMutex", [ref]$createdNew)
+$mutex = New-Object System.Threading.Mutex($false, "Global\PhotoBearWatchdogMutexV2", [ref]$createdNew)
 
 if (-not $createdNew) {
     Log "Ya hay un watchdog de PhotoBearRate corriendo. Saliendo."
