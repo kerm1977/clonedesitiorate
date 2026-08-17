@@ -7,6 +7,18 @@ $ProjectDir = "c:\Users\MINIOS\CascadeProjects\photo-rating-game"
 $PythonExe  = "C:\Users\MINIOS\AppData\Local\Programs\Python\Python311\python.exe"
 $LogFile    = Join-Path $ProjectDir "server.log"
 
+# --- 0) Matar instancias previas para permitir reinicio con doble clic ---
+try {
+    Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%photobear_watchdog.ps1%'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessId -ne $PID } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    $parent = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction SilentlyContinue).ParentProcessId
+    Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%IniciarPhotoBear%'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessId -ne $PID -and $_.ProcessId -ne $parent } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 2
+} catch {}
+
 Set-Location $ProjectDir
 
 # Leer puerto desde config.json (default 8090 para no chocar con plantillaFlask2026)
