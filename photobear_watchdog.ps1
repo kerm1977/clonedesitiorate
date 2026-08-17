@@ -34,9 +34,9 @@ Start-Sleep -Milliseconds 500
 # --- 2) Asegurar Tailscale Funnel activo solo para nuestro puerto ---
 try {
     $funnelStatus = (tailscale funnel status 2>&1 | Out-String)
-    if ($funnelStatus -notmatch ":$Port") {
+    if ($funnelStatus -match "No serve config") {
         Log "Activando Tailscale Funnel en puerto $Port..."
-        tailscale funnel $Port | Out-Null
+        Start-Process -FilePath "tailscale" -ArgumentList "funnel", "--bg", "--yes", $Port -NoNewWindow -Wait:$false | Out-Null
     } else {
         Log "Tailscale Funnel ya activo en puerto $Port."
     }
