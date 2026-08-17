@@ -45,15 +45,16 @@ Start-Sleep -Milliseconds 500
 
 # --- 2) Asegurar Tailscale Funnel activo solo para nuestro puerto ---
 try {
-    $funnelStatus = (tailscale funnel status 2>&1 | Out-String)
-    if ($funnelStatus -match "No serve config") {
-        Log "Activando Tailscale Funnel en puerto $Port..."
-        Start-Process -FilePath "tailscale" -ArgumentList "funnel", "--bg", "--yes", $Port -NoNewWindow -Wait:$false | Out-Null
-    } else {
-        Log "Tailscale Funnel ya activo en puerto $Port."
-    }
+    Log "Reiniciando servicio de Tailscale para limpiar conexion..."
+    Restart-Service -Name "Tailscale" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 3
+    Log "Reconfigurando Tailscale Funnel..."
+    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "reset" -NoNewWindow -Wait:$false -ErrorAction SilentlyContinue | Out-Null
+    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "--bg", "--yes", "http://127.0.0.1:$Port" -NoNewWindow -Wait:$false -ErrorAction SilentlyContinue | Out-Null
+    Start-Sleep -Seconds 5
+    Log "Tailscale Funnel reconfigurado."
 } catch {
-    Log "No se pudo verificar/activar Tailscale Funnel: $_"
+    Log "No se pudo reconfigurar Tailscale Funnel: $_"
 }
 
 # --- 3) Mutex de instancia unica: garantiza que nunca hayan dos watchdogs ---
