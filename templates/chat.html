@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Chat{% endblock %}
+
+{% block head %}
+<style>
+#chatModal {
+    display: block !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    background: #e5ddd5;
+}
+#chatModal .modal-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    margin: 0;
+    transform: none;
+    pointer-events: auto;
+}
+#chatModal .modal-content {
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+#chatModal .modal-header {
+    border-radius: 0;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #ff6b9d, #845ec2) !important;
+}
+#chatModal .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    overflow: hidden;
+    padding: 0;
+    background: #e5ddd5;
+}
+#chatModal .chat-messages {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #e5ddd5;
+}
+#chatModal .modal-footer {
+    flex-shrink: 0;
+    border: none;
+    border-radius: 0;
+    background: #f0f2f5;
+    padding: 0.5rem 1rem;
+    position: static;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<script>
+window.IS_CHAT_PAGE = true;
+window.CHAT_INITIAL_PARTNER = {{ partner | tojson }};
+window.CHAT_INITIAL_TYPE = {{ chat_type | tojson }};
+document.addEventListener('DOMContentLoaded', function() {
+    currentChatType = window.CHAT_INITIAL_TYPE || 'private';
+    openChat(window.CHAT_INITIAL_PARTNER || 'nitalaosita');
+});
+</script>
+{% endblock %}

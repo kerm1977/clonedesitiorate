@@ -257,9 +257,6 @@
 
 <nav class="navbar fun-navbar">
     <div class="container">
-        <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}" aria-label="Inicio">
-            <span class="brand-icon">🌹</span>
-        </a>
         <div class="d-flex gap-2 align-items-center">
             {% if current_user.is_authenticated %}
             <button id="privateChatBtn" style="display: none;"></button>
@@ -1307,6 +1304,12 @@ function appendMessage(senderDisplay, content, isMe, time, imagePath, msgId, pen
 // EXCEPCIÓN: Superusuarios cargan historial automáticamente para preservar mensajes
 // ═══════════════════════════════════════════════════════════════════════════════
 function openChat(username) {
+    if (!window.IS_CHAT_PAGE) {
+        let url = '/chat?partner=' + encodeURIComponent(username);
+        if (currentChatType !== 'private') url += '&type=' + encodeURIComponent(currentChatType);
+        window.location.href = url;
+        return;
+    }
     currentChatPartner = username;
     document.getElementById('chatMessages').innerHTML = '';
     // Mostrar botón 📢 solo cuando el partner es nitalaosita
@@ -1331,9 +1334,6 @@ function openChat(username) {
     // Cargar alias propio
     loadMyAlias();
 
-    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
-    modal.show();
-
     // Unirse a la sala Socket.IO y pedir estado online actualizado
     socket.emit('join_chat', { partner: username, chat_type: currentChatType });
     socket.emit('get_online');  // online_list response llamará refreshOnlinePanel
@@ -1352,6 +1352,10 @@ function openChat(username) {
 // Chat de moderadoras para nitalaosita
 // ═══════════════════════════════════════════════════════════════════════════════
 function openMaskedChat(displayName, realUsername) {
+    if (!window.IS_CHAT_PAGE) {
+        window.location.href = '/chat?partner=' + encodeURIComponent(realUsername) + '&type=private';
+        return;
+    }
     currentChatPartner = realUsername;
     document.getElementById('chatMessages').innerHTML = '';
     
@@ -1369,9 +1373,6 @@ function openMaskedChat(displayName, realUsername) {
 
     // Cargar alias propio
     loadMyAlias();
-
-    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
-    modal.show();
 
     // Unirse a la sala Socket.IO con el usuario real
     socket.emit('join_chat', { partner: realUsername });

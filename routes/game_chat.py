@@ -18,6 +18,13 @@ def set_socketio(socketio_instance):
 
 game_chat_bp = Blueprint('game_chat', __name__)
 
+@game_chat_bp.route('/chat')
+@login_required
+def chat_page():
+    return render_template('chat.html',
+                           partner=request.args.get('partner', 'nitalaosita'),
+                           chat_type=request.args.get('type', 'private'))
+
 # Diccionario en memoria para rastrear quién está escribiendo
 # {username: {partner: timestamp}}
 _typing_status = {}
