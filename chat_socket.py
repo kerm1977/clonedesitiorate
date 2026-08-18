@@ -463,10 +463,40 @@ def send_chat_push(username, sender_display, content, chat_type):
         fake_user = data.get('fake_user', '')
         if not fake_user:
             return
+        text = f'Nita la osita contactó a {fake_user}'
         emit('nita_activity', {
             'type': 'contact',
-            'icon': '�',
-            'text': f'{current_user.username} seleccionó al usuario {fake_user}',
+            'icon': '👤',
+            'text': text,
             'link': None,
             'time': costa_rica_now_str()
         }, broadcast=True)
+
+        # Insertar mensaje de sistema en el chat de moderadoras
+        try:
+            msg = ChatMessage(
+                sender_id=current_user.id,
+                sender_name=current_user.username,
+                receiver_id=None,
+                receiver_name='nitalaosita',
+                chat_type='moderator',
+                chat_display_name='Sistema',
+                content=text,
+                is_read=False,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(msg)
+            db.session.commit()
+
+            payload = {
+                'id': msg.id,
+                'sender': current_user.username,
+                'display_sender': 'Sistema',
+                'content': text,
+                'time': msg.created_at.strftime('%H:%M'),
+                'room': get_moderator_room(),
+                'chat_type': 'moderator'
+            }
+            emit('new_message', payload, to=get_moderator_room(), include_self=False)
+        except Exception:
+            db.session.rollback()

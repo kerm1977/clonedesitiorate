@@ -146,7 +146,9 @@ def register_game_chat_routes(bp):
                 sender_alias = sender.chat_alias
 
             # Determinar el nombre a mostrar
-            if display_name and not is_me:
+            if m.chat_display_name:
+                display_sender_name = m.chat_display_name
+            elif display_name and not is_me:
                 display_sender_name = display_name
             elif sender_alias:
                 display_sender_name = sender_alias
