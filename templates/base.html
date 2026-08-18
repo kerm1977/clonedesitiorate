@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}🐻 PhotoBear{% endblock %}</title>
+    <title>{% block title %}Galerías{% endblock %}</title>
     <!-- Meta tags para no indexar en buscadores -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
@@ -174,7 +174,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="🐻 PhotoBear">
+    <meta name="apple-mobile-web-app-title" content="Galerías">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
     {% block head %}{% endblock %}
     <style>
@@ -258,12 +258,9 @@
 <nav class="navbar fun-navbar">
     <div class="container">
         <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}">
-            <span class="brand-icon">🐻</span> PhotoBear <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
+            Galerías <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
         </a>
         <div class="d-flex gap-2 align-items-center">
-            <button id="searchModalBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Buscar fotos">
-                <i class="bi bi-search"></i>
-            </button>
             <button id="pushNotificationsBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Notificaciones">
                 🔕
             </button>
@@ -448,14 +445,6 @@
 </button>
 {% endif %}
 
-{% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
-<!-- Botón flotante Colecciones (Nitalaosita) -->
-<button onclick="window.location.href='{{ url_for('coleccion.index') }}'" title="Colecciones"
-    style="position:fixed;bottom:206px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
-           background:linear-gradient(135deg,#ff6b9d,#e53935);border:none;color:#fff;font-size:1.4rem;
-           box-shadow:0 4px 16px rgba(229,57,53,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-    🐻
-</button>
 
 <!-- Botón flotante Chat Individual -->
 <button class="btn-pulse" onclick="{% if current_user.username == 'nitalaosita' %}openModeratorChat(){% elif current_user.is_superuser %}openSuperModeratorChat(){% else %}openChat('nitalaosita'){% endif %}" title="Chat Individual"

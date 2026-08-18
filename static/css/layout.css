@@ -1,11 +1,11 @@
 .fun-navbar {
-    background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
-    border-bottom: 5px solid var(--yellow);
+    background: transparent;
+    border: none;
     padding: 0.7rem 0;
     position: sticky;
     top: 0;
     z-index: 1030;
-    box-shadow: 0 4px 12px rgba(132, 94, 194, 0.35);
+    box-shadow: none;
     max-width: 100%;
     overflow: hidden;
 }
