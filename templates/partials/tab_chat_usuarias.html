@@ -2,65 +2,56 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Usuarias del chat</h5>
-            <button class="btn btn-sm btn-primary" onclick="addFakeCategory()">
-                <i class="bi bi-plus-lg me-1"></i>Categoría
+            <button class="btn btn-sm btn-success" onclick="addFakeUser()">
+                <i class="bi bi-plus-lg me-1"></i>Usuaria
             </button>
         </div>
         <div class="card-body">
-            <div id="fakeUsersAdminList" class="accordion"></div>
+            <ul id="fakeUsersAdminList" class="list-group list-group-flush"></ul>
         </div>
     </div>
 </div>
 
 <script>
+let _fakeUsersDefaultCatId = null;
+
 function loadFakeUsersAdmin() {
     const container = document.getElementById('fakeUsersAdminList');
     if (!container) return;
-    container.innerHTML = '<p class="text-muted">Cargando usuarias…</p>';
+    container.innerHTML = '<li class="list-group-item text-muted">Cargando usuarias…</li>';
     fetch('/admin/fake-users')
         .then(function(r) { return r.json(); })
         .then(function(data) { renderFakeUsersAdmin(data); })
         .catch(function() {
-            container.innerHTML = '<p class="text-danger">Error al cargar usuarias.</p>';
+            container.innerHTML = '<li class="list-group-item text-danger">Error al cargar usuarias.</li>';
         });
 }
 
 function renderFakeUsersAdmin(data) {
     const container = document.getElementById('fakeUsersAdminList');
     if (!container) return;
-    if (!data || !data.length) {
-        container.innerHTML = '<p class="text-muted">No hay usuarias configuradas.</p>';
+    const users = [];
+    _fakeUsersDefaultCatId = null;
+    if (data && data.length) {
+        _fakeUsersDefaultCatId = data[0].id;
+        data.forEach(function(cat) {
+            if (cat.names) {
+                cat.names.forEach(function(u) { users.push(u); });
+            }
+        });
+    }
+    if (!users.length) {
+        container.innerHTML = '<li class="list-group-item text-muted">No hay usuarias configuradas.</li>';
         return;
     }
-    container.innerHTML = data.map(function(cat) {
-        const usersHtml = cat.names.map(function(u) {
-            return '<li class="list-group-item d-flex justify-content-between align-items-center">' +
-                '<span>' + formatAtName(escapeHtml(u.name)) + '</span>' +
-                '<div class="btn-group btn-group-sm">' +
-                    '<button class="btn btn-outline-secondary" onclick="renameFakeUser(' + u.id + ', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                    '<button class="btn btn-outline-danger" onclick="deleteFakeUser(' + u.id + ')" title="Borrar"><i class="bi bi-trash"></i></button>' +
-                '</div>' +
-            '</li>';
-        }).join('');
-        return '<div class="accordion-item">' +
-            '<h2 class="accordion-header d-flex align-items-center justify-content-between ps-2">' +
-                '<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat-' + cat.id + '" style="width:auto; flex:1;">' +
-                    escapeHtml(cat.category) +
-                '</button>' +
-                '<div class="btn-group btn-group-sm me-2">' +
-                    '<button class="btn btn-outline-secondary" onclick="renameFakeCategory(' + cat.id + ', \'' + escapeHtml(cat.category).replace(/'/g, "\\'") + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
-                    '<button class="btn btn-outline-danger" onclick="deleteFakeCategory(' + cat.id + ')" title="Borrar"><i class="bi bi-trash"></i></button>' +
-                '</div>' +
-            '</h2>' +
-            '<div id="cat-' + cat.id + '" class="accordion-collapse collapse">' +
-                '<div class="accordion-body">' +
-                    '<div class="d-flex justify-content-end mb-2">' +
-                        '<button class="btn btn-sm btn-success" onclick="addFakeUser(' + cat.id + ')"><i class="bi bi-plus-lg me-1"></i>Usuaria</button>' +
-                    '</div>' +
-                    '<ul class="list-group list-group-flush">' + usersHtml + '</ul>' +
-                '</div>' +
+    container.innerHTML = users.map(function(u) {
+        return '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+            '<span>' + formatAtName(escapeHtml(u.name)) + '</span>' +
+            '<div class="btn-group btn-group-sm">' +
+                '<button class="btn btn-outline-secondary" onclick="renameFakeUser(' + u.id + ', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+                '<button class="btn btn-outline-danger" onclick="deleteFakeUser(' + u.id + ')" title="Borrar"><i class="bi bi-trash"></i></button>' +
             '</div>' +
-        '</div>';
+        '</li>';
     }).join('');
 }
 
@@ -89,38 +80,17 @@ function _fakeApi(url, options) {
     });
 }
 
-function addFakeCategory() {
-    const name = prompt('Nombre de la nueva categoría:');
-    if (!name) return;
-    _fakeApi('/admin/fake-users/category', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name })
-    });
-}
-
-function renameFakeCategory(id, current) {
-    const name = prompt('Nuevo nombre de la categoría:', current);
-    if (!name || name === current) return;
-    _fakeApi('/admin/fake-users/category/' + id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name })
-    });
-}
-
-function deleteFakeCategory(id) {
-    if (!confirm('¿Borrar esta categoría y todas sus usuarias?')) return;
-    _fakeApi('/admin/fake-users/category/' + id, { method: 'DELETE' });
-}
-
-function addFakeUser(catId) {
+function addFakeUser() {
     const name = prompt('Nombre de la nueva usuaria:');
     if (!name) return;
+    if (!_fakeUsersDefaultCatId) {
+        alert('No hay una categoría base. Contacta al admin.');
+        return;
+    }
     _fakeApi('/admin/fake-users/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category_id: catId, name: name })
+        body: JSON.stringify({ category_id: _fakeUsersDefaultCatId, name: name })
     });
 }
 
