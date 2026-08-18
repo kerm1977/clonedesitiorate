@@ -408,7 +408,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content chat-modal">
             <div class="modal-header chat-modal-header">
-                <h5 class="fun-title mb-0">💬 Conversar en Privado</h5>
+                <h5 class="fun-title mb-0">💬 Chat</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-3">
@@ -441,7 +441,7 @@
 
 
 <!-- Botón flotante Chat Individual -->
-<button class="btn-pulse" onclick="{% if current_user.username == 'nitalaosita' %}openModeratorChat(){% elif current_user.is_superuser %}openSuperModeratorChat(){% else %}openChat('nitalaosita'){% endif %}" title="Chat Individual"
+<button id="chatFabBtn" class="btn-pulse" onclick="{% if current_user.username == 'nitalaosita' %}openModeratorChat(){% elif current_user.is_superuser %}openSuperModeratorChat(){% else %}openChat('nitalaosita'){% endif %}" title="Chat Individual"
     style="position:fixed;bottom:144px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
            background:linear-gradient(135deg,#845ec2,#6c3fb0);border:none;color:#fff;font-size:1.4rem;
            box-shadow:0 4px 16px rgba(132,94,194,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
@@ -663,7 +663,12 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content chat-modal">
             <div class="modal-header chat-modal-header">
-                <h5 class="fun-title mb-0">💬 Chat <span id="chatPartnerName" style="font-size:0.85rem; opacity:0.9; font-weight:500;"></span></h5>
+                <h5 class="fun-title mb-0 d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light" onclick="window.history.back()">
+                        <i class="bi bi-arrow-left"></i> Volver atrás
+                    </button>
+                    <span>Chat</span>
+                </h5>
                 <div class="d-flex gap-2 align-items-center">
                     <button class="btn btn-sm btn-outline-light" id="refreshChatBtn" title="Actualizar mensajes">
                         <i class="bi bi-arrow-clockwise"></i>
