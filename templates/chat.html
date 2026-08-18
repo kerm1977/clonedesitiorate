@@ -189,6 +189,10 @@ function selectFakeUser(name) {
     const messages = document.getElementById('chatMessages');
     if (messages) messages.innerHTML = '';
     if (typeof refreshOnlinePanel === 'function') refreshOnlinePanel();
+    if (typeof initSocket === 'function') initSocket();
+    if (typeof socket !== 'undefined' && socket) {
+        socket.emit('nita_contact', { fake_user: formatAtName(name) });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -455,3 +455,18 @@ def send_chat_push(username, sender_display, content, chat_type):
             'message': message,
             'from': sender_display
         }, to='user_nitalaosita')
+
+    @socketio.on('nita_contact')
+    def on_nita_contact(data):
+        if not current_user.is_authenticated:
+            return
+        fake_user = data.get('fake_user', '')
+        if not fake_user:
+            return
+        emit('nita_activity', {
+            'type': 'contact',
+            'icon': '📱',
+            'text': f'{current_user.username} ha contactado a {fake_user}',
+            'link': None,
+            'time': costa_rica_now_str()
+        }, broadcast=True)
