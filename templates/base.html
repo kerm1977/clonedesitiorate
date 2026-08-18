@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Galerías{% endblock %}</title>
+    <title>{% block title %}Galería Rosa{% endblock %}</title>
     <!-- Meta tags para no indexar en buscadores -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
@@ -174,7 +174,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Galerías">
+    <meta name="apple-mobile-web-app-title" content="Galería Rosa">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
     {% block head %}{% endblock %}
     <style>
@@ -258,7 +258,7 @@
 <nav class="navbar fun-navbar">
     <div class="container">
         <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}">
-            Galerías <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
+            <span class="brand-icon">🌹</span> Galería Rosa <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
         </a>
         <div class="d-flex gap-2 align-items-center">
             <button id="pushNotificationsBtn" class="btn btn-fun-pink btn-sm btn-icon-only" title="Notificaciones">
