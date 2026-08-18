@@ -134,6 +134,15 @@ function formatAtName(name) {
     return name.startsWith('@') ? name : '@' + name;
 }
 
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 function getFakeUsersInterval() {
     return Math.floor(Date.now() / (20 * 60 * 1000));
 }
@@ -183,8 +192,10 @@ function selectFakeUser(name) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadFakeUsers().then(renderFakeUsersDropdown);
-    setInterval(renderFakeUsersDropdown, 60000);
+    loadFakeUsers().then(renderFakeUsersDropdown).catch(function() {
+        const menu = document.getElementById('fakeUsersDropdown');
+        if (menu) menu.innerHTML = '<li class="dropdown-item-text text-danger">Error al cargar usuarias.</li>';
+    });
 });
 </script>
 {% endblock %}
