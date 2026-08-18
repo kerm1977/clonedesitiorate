@@ -454,8 +454,6 @@
     🛡️
 </button>
 
-{% endif %}
-
 {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
 <!-- Botón flotante subir material -->
 <button id="nitaUploadFab" onclick="openNitaUploadModal()" title="Subir material"
