@@ -235,13 +235,15 @@ def index():
     has_prev = page > 1
     has_next = page < total_pages
 
+    user_count = User.query.count()
+
     if request.args.get('partial') == '1':
         return render_template('partials/coleccion_grid.html', files=paginated_files,
                                page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
                                filter_type=filter_type, is_moderator=is_moderator)
     return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
                            page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
-                           filter_type=filter_type, is_moderator=is_moderator)
+                           filter_type=filter_type, is_moderator=is_moderator, user_count=user_count)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])

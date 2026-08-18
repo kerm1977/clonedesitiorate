@@ -34,6 +34,8 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-xK9mP2-change-in-prod')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///photogame.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     db.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet',

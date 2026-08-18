@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Colecciones{% endblock %}
+{% block title %}Galería Rosas{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <h2 class="fun-title text-center mb-1">📁 Colecciones</h2>
-    <p class="text-center text-muted mb-4" style="font-size:0.9rem;">Descargue los videos</p>
+    <h2 class="fun-title text-center mb-1">🌹 Galería Rosas</h2>
+    <p class="text-center text-muted mb-4" style="font-size:0.9rem;">
+        <span class="badge bg-info text-dark">{{ user_count }} Usuarios en este sitio</span>
+    </p>
 
     <div class="d-flex justify-content-center gap-2 mb-4" id="coleccionFilters">
         <a href="#" data-filter="all" class="btn btn-sm {{ 'btn-primary' if filter_type == 'all' else 'btn-outline-secondary' }}" title="Ver todo" onclick="loadColeccionFilter('all'); return false;">
