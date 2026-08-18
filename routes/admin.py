@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
-from models import db, User, Image, Message, AboutContent, AppConfig, FinalFeedback, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage
+from models import db, User, Image, Message, AppConfig, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage
 from chat_socket import _user_sids
 from datetime import datetime, timedelta
 import json
@@ -99,17 +99,13 @@ def admin():
     return render_template('admin.html',
         nita_online=nita_online,
         messages=Message.query.order_by(Message.created_at.desc()).all(),
-        about=AboutContent.query.first(),
         images=Image.query.order_by(Image.created_at.desc()).all(),
         images_count=Image.query.count(),
         videos_count=videos_count,
         coleccion_count=coleccion_count,
         sources=ImageSource.query.order_by(ImageSource.created_at).all(),
         upload_sources=ImageSource.query.filter_by(source_type='upload', active=True).all(),
-        feedbacks=FinalFeedback.query.order_by(FinalFeedback.created_at.desc()).all(),
         users=User.query.order_by(User.created_at if hasattr(User, 'created_at') else User.id).all(),
-        cf_token=_cfg('cf_token'), cf_port=_cfg('cf_port','5000'),
-        ts_email=_cfg('ts_email'), ts_authkey=_cfg('ts_authkey'), ts_hostname=_cfg('ts_hostname'), ts_port=_cfg('ts_port','5000'),
         community_title=_cfg('community_title', '¡Felicidades!'),
         community_subtitle=_cfg('community_subtitle', 'Eres parte de nuestra Comunidad.'),
         community_message=_cfg('community_message', 'PedoMoms Love'),
@@ -171,21 +167,6 @@ def users_count():
     return jsonify(count=0)
 
 
-@admin_bp.route('/about', methods=['POST'])
-@login_required
-def update_about():
-    if _guard():
-        return redirect(url_for('game.index'))
-    content = request.form.get('content', '')
-    about = AboutContent.query.first()
-    if about:
-        about.content = content
-    else:
-        db.session.add(AboutContent(content=content))
-    db.session.commit()
-    flash('Contenido "Conózcanos" actualizado', 'success')
-    return redirect(url_for('admin.admin') + '#tabConocenos')
-
 
 @admin_bp.route('/community-message', methods=['POST'])
 @login_required
@@ -236,55 +217,6 @@ def mark_notification_read(notification_id):
     return jsonify(success=True)
 
 
-@admin_bp.route('/send-push', methods=['POST'])
-@login_required
-def send_push_notification():
-    if _guard():
-        return jsonify(error='No autorizado'), 403
-    
-    message = request.form.get('message', '¡Nueva notificación!')
-    user_session = request.form.get('user_session')
-    
-    from push_helper import send_push_to_all, send_push_to_session
-    
-    if user_session:
-        success = send_push_to_session(user_session, message)
-    else:
-        success = send_push_to_all(message)
-    
-    if success:
-        flash('Notificación enviada exitosamente', 'success')
-    else:
-        flash('Error al enviar notificación', 'error')
-    
-    return redirect(url_for('admin.admin') + '#tabConfig')
-
-
-@admin_bp.route('/change-port', methods=['POST'])
-@login_required
-def change_port():
-    if _guard():
-        return jsonify(error='No autorizado'), 403
-    
-    new_port = request.form.get('port', '8080')
-    
-    try:
-        new_port = int(new_port)
-        if new_port < 1 or new_port > 65535:
-            flash('Puerto inválido. Debe estar entre 1 y 65535', 'error')
-            return redirect(url_for('admin.admin') + '#tabConfig')
-        
-        # Actualizar config.json
-        config = {'port': new_port}
-        with open('config.json', 'w') as f:
-            json.dump(config, f)
-        
-        flash(f'Puerto cambiado a {new_port}. Reinicia la app para aplicar cambios.', 'success')
-        return redirect(url_for('admin.admin') + '#tabConfig')
-    
-    except ValueError:
-        flash('Puerto inválido. Debe ser un número.', 'error')
-        return redirect(url_for('admin.admin') + '#tabConfig')
 
 
 # ── Bienvenida Nita ─────────────────────────────────────────────
@@ -497,68 +429,6 @@ def backup_download():
         as_attachment=True,
         download_name=zip_name
     )
-
-@admin_bp.route('/settings', methods=['GET', 'POST'])
-@login_required
-def settings():
-    if not current_user.is_superuser:
-        return jsonify(error='No autorizado'), 403
-
-    if request.method == 'POST':
-        user_count = request.form.get('user_count', '').strip()
-        chat_info = request.form.get('chat_info', '').strip()
-        show_chat_info = request.form.get('show_chat_info') == 'true'
-
-        # Save to AppConfig
-        if user_count:
-            config = AppConfig.query.filter_by(key='user_count_message').first()
-            if config:
-                config.value = user_count
-            else:
-                config = AppConfig(key='user_count_message', value=user_count)
-                db.session.add(config)
-
-        if chat_info is not None:
-            config = AppConfig.query.filter_by(key='chat_info_message').first()
-            if config:
-                config.value = chat_info
-            else:
-                config = AppConfig(key='chat_info_message', value=chat_info)
-                db.session.add(config)
-
-        config = AppConfig.query.filter_by(key='show_chat_info').first()
-        if config:
-            config.value = 'true' if show_chat_info else 'false'
-        else:
-            config = AppConfig(key='show_chat_info', value='true' if show_chat_info else 'false')
-            db.session.add(config)
-
-        db.session.commit()
-        flash('Configuración guardada', 'success')
-        return redirect(url_for('admin.settings'))
-
-    # Get current values
-    user_count_config = AppConfig.query.filter_by(key='user_count_message').first()
-    chat_info_config = AppConfig.query.filter_by(key='chat_info_message').first()
-    show_chat_info_config = AppConfig.query.filter_by(key='show_chat_info').first()
-
-    return render_template('admin_settings.html',
-                           user_count=user_count_config.value if user_count_config else '1004 Usuarios en este sitio',
-                           chat_info=chat_info_config.value if chat_info_config else 'Este es un chat exclusivo e independiente para un grupo muy selecto de Pedófilas mujeres. No chateamos en grupo por la alta probabilidad de ser evidenciadas. Las personas aqui en este chat se llaman con @antes del nombre La Moderadora de esta sección es @Sorane cualquier pregunta a ella',
-                           show_chat_info=show_chat_info_config.value == 'true' if show_chat_info_config else True)
-
-@admin_bp.route('/api/settings', methods=['GET'])
-def api_settings():
-        # Public endpoint - anyone can read settings
-        user_count_config = AppConfig.query.filter_by(key='user_count_message').first()
-        chat_info_config = AppConfig.query.filter_by(key='chat_info_message').first()
-        show_chat_info_config = AppConfig.query.filter_by(key='show_chat_info').first()
-
-        return jsonify({
-            'user_count': user_count_config.value if user_count_config else '1004 Usuarios en este sitio',
-            'chat_info': chat_info_config.value if chat_info_config else 'Este es un chat exclusivo e independiente para un grupo muy selecto de Pedófilas mujeres. No chateamos en grupo por la alta probabilidad de ser evidenciadas. Las personas aqui en este chat se llaman con @antes del nombre La Moderadora de esta sección es @Sorane cualquier pregunta a ella',
-            'show_chat_info': show_chat_info_config.value == 'true' if show_chat_info_config else True
-        })
 
 @admin_bp.route('/nita-activity')
 @login_required

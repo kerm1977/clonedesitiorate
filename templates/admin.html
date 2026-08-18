@@ -127,27 +127,6 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabConocenos" role="tab">
-                <i class="bi bi-heart me-1"></i>Conózcanos
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabFeedback" role="tab">
-                <i class="bi bi-envelope me-1"></i>Feedback
-                {% if feedbacks %}<span class="badge bg-info ms-1">{{ feedbacks|length }}</span>{% endif %}
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabConfig" role="tab">
-                <i class="bi bi-sliders me-1"></i>Config
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabConectividad" role="tab">
-                <i class="bi bi-wifi me-1"></i>Conectividad
-            </a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#tabComunidad" role="tab">
                 <i class="bi bi-heart-fill me-1"></i>Mensaje Final
             </a>
@@ -155,11 +134,6 @@
         <li class="nav-item">
             <a class="nav-link" data-bs-toggle="tab" href="#tabUsuarios" role="tab">
                 <i class="bi bi-people-fill me-1"></i>Usuarios
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabVotaciones" role="tab">
-                <i class="bi bi-star-fill me-1"></i>Votaciones
             </a>
         </li>
         <li class="nav-item">
@@ -187,13 +161,8 @@
     <div class="tab-content">
         {% include 'partials/tab_mensajes.html' %}
         {% include 'partials/tab_imagenes.html' %}
-        {% include 'partials/tab_conocenos.html' %}
-        {% include 'partials/tab_feedback.html' %}
-        {% include 'partials/tab_config.html' %}
-        {% include 'partials/tab_conectividad.html' %}
         {% include 'partials/tab_comunidad.html' %}
         {% include 'partials/tab_usuarios.html' %}
-        {% include 'partials/tab_votaciones.html' %}
         {% include 'partials/tab_favoritas.html' %}
         {% include 'partials/tab_nita_welcome.html' %}
         {% include 'partials/tab_backup.html' %}
