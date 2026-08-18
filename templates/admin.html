@@ -38,9 +38,6 @@
                     <i class="bi bi-tools"></i> Herramientas
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ url_for('admin.settings') }}">
-                        <i class="bi bi-gear me-2"></i>Configuración
-                    </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('admin.nita_activity_history') }}">
                         <i class="bi bi-clock-history me-2"></i>Historial de actividad de NITA
                     </a></li>
@@ -174,9 +171,6 @@
 {% block scripts %}
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="{{ url_for('static', filename='js/admin.min.js') }}"></script>
-{% if about and about.content %}
-<script>quill.root.innerHTML = {{ about.content | tojson }};</script>
-{% endif %}
 
 <script>
 function loadShareUrl() {
