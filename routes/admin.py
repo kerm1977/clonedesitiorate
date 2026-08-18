@@ -109,6 +109,7 @@ def admin():
         community_title=_cfg('community_title', '¡Felicidades!'),
         community_subtitle=_cfg('community_subtitle', 'Eres parte de nuestra Comunidad.'),
         community_message=_cfg('community_message', 'PedoMoms Love'),
+        visible_user_count=_cfg('visible_user_count', '1004'),
         blocked_ips=LoginAttempt.query.filter_by(blocked=True).order_by(LoginAttempt.last_attempt.desc()).all(),
         compress_log=compress_log)
 
@@ -468,6 +469,26 @@ def nita_activity_history():
                            dislikes=[_format(log) for log in dislikes],
                            downloads=[_format(log) for log in downloads],
                            other_entries=[_format(log) for log in other])
+
+
+@admin_bp.route('/visible-user-count', methods=['POST'])
+@login_required
+def set_visible_user_count():
+    if _guard():
+        return redirect(url_for('game.index'))
+    count = request.form.get('count', '1004').strip()
+    try:
+        int(count)
+    except ValueError:
+        count = '1004'
+    cfg = AppConfig.query.filter_by(key='visible_user_count').first()
+    if cfg:
+        cfg.value = count
+    else:
+        db.session.add(AppConfig(key='visible_user_count', value=count))
+    db.session.commit()
+    flash('Cantidad de usuarios visible actualizada', 'success')
+    return redirect(url_for('admin.admin') + '#tabAjustes')
 
 
 @admin_bp.route('/delete-image/<int:image_id>', methods=['POST'])

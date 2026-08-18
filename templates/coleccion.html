@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Galería Rosas{% endblock %}
+{% block title %}Galería Rosa{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <h2 class="fun-title text-center mb-1">🌹 Galería Rosas</h2>
+    <h2 class="fun-title text-center mb-1">🌹 Galería Rosa</h2>
     <p class="text-center text-muted mb-4" style="font-size:0.9rem;">
-        <span class="badge bg-info text-dark">{{ user_count }} Usuarios en este sitio</span>
+        <span class="badge bg-info text-dark">{{ visible_user_count }} Usuarios en este sitio</span>
     </p>
 
     <div class="d-flex justify-content-center gap-2 mb-4" id="coleccionFilters">
@@ -19,6 +19,11 @@
         <a href="#" data-filter="videos" class="btn btn-sm {{ 'btn-primary' if filter_type == 'videos' else 'btn-outline-secondary' }}" title="Solo videos" onclick="loadColeccionFilter('videos'); return false;">
             <i class="bi bi-camera-video"></i> Videos
         </a>
+        {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
+        <button type="button" class="btn btn-sm btn-outline-success" title="Subir material" onclick="openNitaUploadModal()">
+            <i class="bi bi-cloud-upload"></i> Subir material
+        </button>
+        {% endif %}
     </div>
 
     <div id="coleccionContent">

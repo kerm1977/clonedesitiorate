@@ -5,7 +5,7 @@ import hashlib
 import random
 from flask import Blueprint, render_template, send_file, abort, current_app, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from models import db, CollectionOpinion, User, Image, ImageVote, ImageDownload
+from models import db, CollectionOpinion, User, Image, ImageVote, ImageDownload, AppConfig
 from utils import log_activity
 
 coleccion_bp = Blueprint('coleccion', __name__, url_prefix='/coleccion')
@@ -235,7 +235,8 @@ def index():
     has_prev = page > 1
     has_next = page < total_pages
 
-    user_count = User.query.count()
+    visible_cfg = AppConfig.query.filter_by(key='visible_user_count').first()
+    visible_user_count = visible_cfg.value if visible_cfg else '1004'
 
     if request.args.get('partial') == '1':
         return render_template('partials/coleccion_grid.html', files=paginated_files,
@@ -243,7 +244,7 @@ def index():
                                filter_type=filter_type, is_moderator=is_moderator)
     return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
                            page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
-                           filter_type=filter_type, is_moderator=is_moderator, user_count=user_count)
+                           filter_type=filter_type, is_moderator=is_moderator, visible_user_count=visible_user_count)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])

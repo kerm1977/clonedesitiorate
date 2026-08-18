@@ -1,0 +1,26 @@
+<div class="tab-pane fade" id="tabAjustes" role="tabpanel">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <i class="bi bi-people me-2"></i>Usuarios visibles
+                </div>
+                <div class="admin-card-body">
+                    <p class="text-muted mb-3">
+                        Número que se mostrará en el badge de <strong>Galería Rosa</strong>.
+                    </p>
+                    <form action="{{ url_for('admin.set_visible_user_count') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" name="count" class="form-control form-control-dark"
+                                   value="{{ visible_user_count }}" min="0" required>
+                        </div>
+                        <button type="submit" class="btn btn-fun-pink w-100">
+                            <i class="bi bi-floppy me-1"></i>Guardar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

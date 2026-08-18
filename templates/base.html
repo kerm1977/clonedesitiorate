@@ -257,8 +257,8 @@
 
 <nav class="navbar fun-navbar">
     <div class="container">
-        <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}">
-            <span class="brand-icon">🌹</span> Galería Rosa <span class="badge bg-info text-dark ms-2" style="font-size: 0.8rem; font-weight: 500;" id="userCountBadge">1004 Usuarios en este sitio</span>
+        <a class="navbar-brand fun-brand" href="{{ url_for('game.index') }}" aria-label="Inicio">
+            <span class="brand-icon">🌹</span>
         </a>
         <div class="d-flex gap-2 align-items-center">
             {% if current_user.is_authenticated %}
@@ -452,14 +452,6 @@
 </button>
 
 {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
-<!-- Botón flotante subir material -->
-<button id="nitaUploadFab" onclick="openNitaUploadModal()" title="Subir material"
-    style="position:fixed;bottom:20px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
-           background:linear-gradient(135deg,#28a745,#20c997);border:none;color:#fff;font-size:1.6rem;
-           box-shadow:0 4px 16px rgba(40,167,69,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-    ☁️
-</button>
-
 <!-- Modal subir material Nita -->
 <div class="modal fade" id="nitaUploadModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
@@ -742,33 +734,6 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-// Load settings from API
-fetch('/admin/api/settings')
-    .then(r => r.json())
-    .then(data => {
-        // Update user count badge
-        const userCountBadge = document.getElementById('userCountBadge');
-        if (userCountBadge && data.user_count) {
-            userCountBadge.textContent = data.user_count;
-        }
-        
-        // Update chat info message
-        const chatInfoDiv = document.getElementById('chatInfoMessage');
-        if (chatInfoDiv && data.chat_info) {
-            chatInfoDiv.querySelector('small').textContent = data.chat_info;
-            if (data.show_chat_info) {
-                chatInfoDiv.style.display = 'block';
-            }
-        }
-    })
-    .catch(() => {
-        // Use defaults if API fails
-        const userCountBadge = document.getElementById('userCountBadge');
-        if (userCountBadge) {
-            userCountBadge.textContent = '1004 Usuarios en este sitio';
-        }
-    });
-
 // ── Botón flotante de opciones (disponible en TODAS las vistas) ──
 function toggleOptions() {
     const menu = document.getElementById('optionsMenu');

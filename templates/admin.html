@@ -153,6 +153,11 @@
                 <i class="bi bi-bell me-1"></i>Notificaciones
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabAjustes" role="tab">
+                <i class="bi bi-sliders me-1"></i>Ajustes
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content">
@@ -164,6 +169,7 @@
         {% include 'partials/tab_nita_welcome.html' %}
         {% include 'partials/tab_backup.html' %}
         {% include 'partials/tab_notificaciones.html' %}
+        {% include 'partials/tab_ajustes.html' %}
     </div>
 </div>
 {% endblock %}
