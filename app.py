@@ -97,7 +97,8 @@ def create_app():
     from routes.admin_image_questions import admin_image_questions_bp
     from routes.admin_feedback import admin_feedback_bp
     from routes.push_notifications import push_bp
-    from routes.game_chat import game_chat_bp
+    from routes.game_chat import game_chat_bp, register_game_chat_routes
+    register_game_chat_routes(game_chat_bp)
     from routes.coleccion import coleccion_bp
     from routes.nita_upload import nita_upload_bp
 
@@ -112,6 +113,7 @@ def create_app():
     app.register_blueprint(admin_image_questions_bp)
     app.register_blueprint(admin_feedback_bp)
     app.register_blueprint(push_bp)
+    app.register_blueprint(game_chat_bp)
     app.register_blueprint(coleccion_bp)
     app.register_blueprint(nita_upload_bp)
     app.config.setdefault('MAX_CONTENT_LENGTH', 100 * 1024 * 1024)
