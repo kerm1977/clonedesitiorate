@@ -668,6 +668,7 @@
                         <i class="bi bi-arrow-left"></i> Volver atrás
                     </button>
                     <span>Chat</span>
+                    <span id="chatPartnerName" class="badge rounded-pill" style="display:none; background:rgba(255,255,255,.25); color:#fff; font-size:.8rem; padding:.25rem .6rem;"></span>
                     <div class="dropdown ms-2">
                         <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Usuarias
@@ -1257,7 +1258,8 @@ function refreshOnlinePanel() {
 
     const partnerEl = document.getElementById('chatPartnerName');
     const partnerDisplay = partnerEl ? partnerEl.textContent : currentChatPartner;
-    const partnerOnline = onlineUsers.has(currentChatPartner);
+    const partnerOnline = onlineUsers.has(currentChatPartner) ||
+        (typeof isFakeUserConnected === 'function' && isFakeUserConnected(currentChatPartner));
 
     list.innerHTML = `
         <div class="chat-online-user">

@@ -156,12 +156,30 @@ function renderFakeUsersDropdown() {
         const online = isFakeUserConnected(name);
         if (online) connected++;
         const dotClass = online ? 'online' : 'offline';
-        html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>' + formatAtName(name) + '</span></li>';
+        html += '<li><a class="dropdown-item fake-user-item d-flex align-items-center" href="#" data-name="' + escapeHtml(name) + '"><span class="status-dot ' + dotClass + ' me-2"></span>' + formatAtName(name) + '</a></li>';
     });
     html += '<li class="dropdown-item-text text-center text-muted">Más 200</li>';
     menu.innerHTML = html;
+    menu.querySelectorAll('.fake-user-item').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            selectFakeUser(this.dataset.name);
+        });
+    });
     const countEl = document.getElementById('fakeUsersCount');
     if (countEl) countEl.textContent = connected;
+}
+
+function selectFakeUser(name) {
+    currentChatPartner = name;
+    const partnerEl = document.getElementById('chatPartnerName');
+    if (partnerEl) {
+        partnerEl.textContent = formatAtName(name);
+        partnerEl.style.display = 'inline-block';
+    }
+    const messages = document.getElementById('chatMessages');
+    if (messages) messages.innerHTML = '';
+    if (typeof refreshOnlinePanel === 'function') refreshOnlinePanel();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
