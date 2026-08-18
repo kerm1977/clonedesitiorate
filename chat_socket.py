@@ -465,8 +465,8 @@ def send_chat_push(username, sender_display, content, chat_type):
             return
         emit('nita_activity', {
             'type': 'contact',
-            'icon': '📱',
-            'text': f'{current_user.username} ha contactado a {fake_user}',
+            'icon': '�',
+            'text': f'{current_user.username} seleccionó al usuario {fake_user}',
             'link': None,
             'time': costa_rica_now_str()
         }, broadcast=True)
