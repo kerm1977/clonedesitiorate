@@ -180,7 +180,7 @@ function renderFakeUsersDropdown() {
 }
 
 function selectFakeUser(name) {
-    currentChatPartner = name;
+    nitaFakeUser = name;
     const partnerEl = document.getElementById('chatPartnerName');
     if (partnerEl) {
         partnerEl.textContent = formatAtName(name);

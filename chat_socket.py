@@ -192,6 +192,8 @@ def register_socket_events(socketio):
             else:
                 receiver_name = partner
 
+            chat_display_name = data.get('chat_display_name') if chat_type == 'moderator' and current_name == 'nitalaosita' else None
+
             msg = ChatMessage(
                 sender_id=current_user.id,
                 sender_name=current_name,
@@ -199,13 +201,13 @@ def register_socket_events(socketio):
                 content=content,
                 is_read=False,
                 chat_type=chat_type,
-                chat_display_name=None,
+                chat_display_name=chat_display_name,
                 created_at=datetime.utcnow()
             )
             db.session.add(msg)
             db.session.commit()
 
-            sender_display = get_display_name(current_user)
+            sender_display = chat_display_name or get_display_name(current_user)
             
             # Preparar payload
             if chat_type == 'moderator':
@@ -474,6 +476,7 @@ def send_chat_push(username, sender_display, content, chat_type):
 
         # Insertar mensaje de sistema en el chat de moderadoras
         try:
+            content = f'{fake_user}: {text}'
             msg = ChatMessage(
                 sender_id=current_user.id,
                 sender_name=current_user.username,
@@ -481,7 +484,7 @@ def send_chat_push(username, sender_display, content, chat_type):
                 receiver_name='nitalaosita',
                 chat_type='moderator',
                 chat_display_name='Sistema',
-                content=text,
+                content=content,
                 is_read=False,
                 created_at=datetime.utcnow()
             )
@@ -492,7 +495,7 @@ def send_chat_push(username, sender_display, content, chat_type):
                 'id': msg.id,
                 'sender': current_user.username,
                 'display_sender': 'Sistema',
-                'content': text,
+                'content': content,
                 'time': msg.created_at.strftime('%H:%M'),
                 'room': get_moderator_room(),
                 'chat_type': 'moderator'

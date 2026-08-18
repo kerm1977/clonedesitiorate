@@ -834,7 +834,13 @@ function addNitaActivity(data) {
 // ── Socket.IO Chat ──────────────────────────────────────────────
 let currentChatPartner = null;
 let currentChatType = 'private';  // 'private' o 'moderator'
+let nitaFakeUser = null;  // fake user seleccionada por nitalaosita
 let socket = null;
+
+function formatAtName(name) {
+    name = String(name || '');
+    return name.startsWith('@') ? name : '@' + name;
+}
 let typingTimer = null;
 let onlineUsers = new Set();
 
@@ -1596,10 +1602,11 @@ function sendChatMessage() {
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
     const me = '{{ current_user.username if current_user.is_authenticated else "" }}';
+    const chatDisplayName = (typeof nitaFakeUser !== 'undefined' && nitaFakeUser) ? formatAtName(nitaFakeUser) : null;
     const pendingKey = 'pending_' + Date.now();
-    appendMessage(me, content, true, timeStr, null, null, pendingKey);
+    appendMessage(chatDisplayName || me, content, true, timeStr, null, null, pendingKey);
 
-    socket.emit('send_message', { partner: currentChatPartner, content, pending_key: pendingKey, chat_type: currentChatType });
+    socket.emit('send_message', { partner: currentChatPartner, content, pending_key: pendingKey, chat_type: currentChatType, chat_display_name: chatDisplayName });
     playSendSound();
     input.value = '';
 
