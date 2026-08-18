@@ -66,6 +66,32 @@
 #chatModal .modal-header .btn-light[data-bs-dismiss="modal"] {
     display: none !important;
 }
+#fakeUsersDropdown .dropdown-header {
+    color: #bbb;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: .25rem 1rem;
+}
+#fakeUsersDropdown .dropdown-item-text {
+    font-size: .85rem;
+    padding: .35rem .75rem;
+    display: block;
+    color: #f8f9fa;
+}
+#fakeUsersDropdown .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: .5rem;
+}
+#fakeUsersDropdown .status-dot.online {
+    background: #25d366;
+}
+#fakeUsersDropdown .status-dot.offline {
+    background: #6c757d;
+}
 </style>
 {% endblock %}
 
@@ -77,6 +103,60 @@ window.CHAT_INITIAL_TYPE = {{ chat_type | tojson }};
 document.addEventListener('DOMContentLoaded', function() {
     currentChatType = window.CHAT_INITIAL_TYPE || 'private';
     openChat(window.CHAT_INITIAL_PARTNER || 'nitalaosita');
+});
+</script>
+
+<script>
+const FAKE_USER_CATEGORIES = [
+    { category: 'Animales con Carácter', names: ['OsaSinCueva','PandaDormilona','CulebraCoqueta','ArdillaEscarbadora','ZorraCosmica','GatitaBerrinchuda','LeonaEnPajamas','JirafaCuriosa','TortugaAcelerada','RanaMelodramatica','AbejaSinRumbo','HienaSonriente','BúhaNocturna','LobaTranquila','FocaPerezosa','CebraSinRayas','NutriaDivertida','GaviotaGolosina','MofetaElegante','MariposaConDudas'] },
+    { category: 'Seres Fantásticos y Místicos', names: ['ElfaSinMagia','SirenaDescalza','BrujitaSinEscoba','HadaDespistada','VampiraConGluten','NinfaDelChisme','MagaSinVarita','DragonaTranquila','SombraMistica','MonstruaDeBajoDeLaCama','DiablaEnVacaciones','DiosaDelCaos','GargolaSoñadora','ValkiriaEnCamison','ZombiePerezosa'] },
+    { category: 'Naturaleza, Plantas y Clima', names: ['FlorDeCacto','RosaEspinoza','RosaSinEspinas','HojaAlViento','MargaritaDeshojada','SetaMágica','PalmeraDespeinada','MentaFresca','OrquídeaSalvaje','TormentaEnTaza','NubeDeAlgodón','BrisaPerezosa','ChispaDeLuz','OlaDeCalor','NieveDerretida'] },
+    { category: 'Culinarias y Desastres en Cocina', names: ['EmpanadaVoladora','GalletaConPicante','ArepaSinRelleno','ManzanaEnvenenada','FresitaSalvaje','SopaDeTenedor','TazaSinCafe','PapitaFritaSola','AceitunaCoqueta','CerezaDelPastel','UvaMelancolica','PalomitaQuemada','DonutSinHueco','SalsaPicosa','LimonadaCaliente'] },
+    { category: 'Profesiones Absurdas y Títulos', names: ['LicenciadaEnDramas','IngenieraEnChismes','DoctoraProcrastinación','AbogadaDePueblo','FilósofaBarata','EspecialistaEnNadas','PresidentaDelCaos','ReinaDelSofa','DuenaDelUniverso','CapitanaBarata','JefaDePrensaFalsa','MaestraDelDesastre','PolicíaDelChisme','NinjaDeCocina','DirectoraDeNada'] },
+    { category: 'Dramas y Caos Digital', names: ['BateriaEnUnPorCiento','CalculadoraSinPilas','DesastreConTacones','CrisisDeLasTresAM','Error404Femenino','MemoriaDePez','PunteriaDeTropezon','RedSinConexion','TropiezoConstante','ConfusionEterna','SuenoIncumplido','SombraSospechosa','PerfilSinFoto','MaldicionDigital','PeligroAmbulante'] },
+    { category: 'Frases, Actitudes y Ocurrencias', names: ['ChismosaOficial','SoloVinePorElChisme','TuVecinaFavorita','AlguienMeLlamo','QueAlguienMeExplique','NoSeQueHagoAqui','NoSoyUnBot','OjoAlCharco','PreguntaleAOtra','SinComentarios','UltimaEnEnterarse','UltimaHora','BuzonDeQuejas','GritoEnElVacio','SilencioIncomodo','PensandoAun','YaVuelvo','YoNoFui','ApagaYVamonos','BuscoMiLlave'] }
+];
+
+function fakeUserHash(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) - h) + str.charCodeAt(i);
+        h |= 0;
+    }
+    return Math.abs(h);
+}
+
+function getFakeUsersInterval() {
+    return Math.floor(Date.now() / (20 * 60 * 1000));
+}
+
+function isFakeUserConnected(name) {
+    const seed = getFakeUsersInterval();
+    return (fakeUserHash(name + '|' + seed) % 100) < 65;
+}
+
+function renderFakeUsersDropdown() {
+    const menu = document.getElementById('fakeUsersDropdown');
+    if (!menu) return;
+    let html = '<li class="dropdown-header"><strong>Usuarias</strong> — <span id="fakeUsersCount">0</span> en línea</li><li><hr class="dropdown-divider"></li>';
+    let connected = 0;
+    FAKE_USER_CATEGORIES.forEach(function(cat) {
+        html += '<li class="dropdown-header">' + cat.category + '</li>';
+        cat.names.forEach(function(name) {
+            const online = isFakeUserConnected(name);
+            if (online) connected++;
+            const dotClass = online ? 'online' : 'offline';
+            html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>@' + name + '</span></li>';
+        });
+    });
+    menu.innerHTML = html;
+    const countEl = document.getElementById('fakeUsersCount');
+    if (countEl) countEl.textContent = connected;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    renderFakeUsersDropdown();
+    setInterval(renderFakeUsersDropdown, 60000);
 });
 </script>
 {% endblock %}
