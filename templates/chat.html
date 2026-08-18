@@ -129,6 +129,11 @@ function fakeUserHash(str) {
     return Math.abs(h);
 }
 
+function formatAtName(name) {
+    name = String(name);
+    return name.startsWith('@') ? name : '@' + name;
+}
+
 function getFakeUsersInterval() {
     return Math.floor(Date.now() / (20 * 60 * 1000));
 }
@@ -149,7 +154,7 @@ function renderFakeUsersDropdown() {
             const online = isFakeUserConnected(name);
             if (online) connected++;
             const dotClass = online ? 'online' : 'offline';
-            html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>@' + name + '</span></li>';
+            html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>' + formatAtName(name) + '</span></li>';
         });
     });
     menu.innerHTML = html;
