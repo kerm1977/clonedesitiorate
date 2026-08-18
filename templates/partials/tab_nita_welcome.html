@@ -77,50 +77,6 @@
     </div>
 </div>
 
-<!-- ── Sección: Botón Reportar ─────────────────────────────────── -->
-<div class="row g-4 mt-1">
-    <div class="col-12">
-        <div class="admin-card">
-            <div class="admin-card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-flag me-2 text-warning"></i>Botón "Reportar" en comentarios</span>
-                <span id="nrStatusBadge" class="badge fs-6 bg-secondary">Cargando...</span>
-            </div>
-            <div class="admin-card-body">
-                <p class="small text-muted mb-3">
-                    Cuando está <strong>activado</strong>, nitalaosita verá un botón 🚩 en cada comentario de la Historia de la Semana. Al pulsarlo se muestra el mensaje que definas aquí.
-                </p>
-                <div class="row g-3">
-                    <div class="col-12 d-flex align-items-center gap-2 mb-1">
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="nrEnabled">
-                            <label class="form-check-label fw-semibold" for="nrEnabled">Mostrar botón Reportar a nitalaosita</label>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <label class="form-label small fw-semibold">Emoji</label>
-                        <input type="text" id="nrEmoji" class="form-control form-control-dark text-center"
-                               value="🚩" maxlength="4" style="font-size:1.3rem;">
-                    </div>
-                    <div class="col-9">
-                        <label class="form-label small fw-semibold">Título del modal</label>
-                        <input type="text" id="nrTitle" class="form-control form-control-dark"
-                               value="¡Gracias por reportar! 🚩">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold">Mensaje personalizado (se muestra cada vez que ella presiona Reportar)</label>
-                        <textarea id="nrMsg" class="form-control form-control-dark" rows="4"
-                                  placeholder="Escribe el mensaje que verá nitalaosita al reportar un comentario..."></textarea>
-                    </div>
-                    <div class="col-12">
-                        <button class="btn btn-warning btn-sm px-4" onclick="saveNitaReport()">
-                            <i class="bi bi-floppy me-1"></i>Guardar configuración
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
 let _nwLoaded = false;
@@ -202,53 +158,4 @@ function sendNitaWelcomeNow() {
         });
 }
 
-// Al abrir el tab también cargamos config de reporte
-const _origLoadNitaWelcome = loadNitaWelcome;
-loadNitaWelcome = function() { _origLoadNitaWelcome(); loadNitaReport(); };
-
-// ── Botón Reportar ──────────────────────────────────────────────
-let _nrLoaded = false;
-
-function loadNitaReport() {
-    if (_nrLoaded) return;
-    fetch('/admin/nita-report')
-        .then(r => r.json())
-        .then(d => {
-            _nrLoaded = false;
-            document.getElementById('nrEnabled').checked = !!d.enabled;
-            document.getElementById('nrEmoji').value     = d.emoji  || '🚩';
-            document.getElementById('nrTitle').value     = d.title  || '¡Gracias por reportar! 🚩';
-            document.getElementById('nrMsg').value       = d.msg    || '';
-            _updateNrStatus(!!d.enabled);
-        });
-}
-
-function _updateNrStatus(enabled) {
-    const b = document.getElementById('nrStatusBadge');
-    if (!b) return;
-    b.textContent = enabled ? '✅ Visible' : '⏸ Oculto';
-    b.className = 'badge fs-6 ' + (enabled ? 'bg-success' : 'bg-secondary');
-}
-
-function saveNitaReport() {
-    const payload = {
-        enabled: document.getElementById('nrEnabled').checked,
-        emoji:   document.getElementById('nrEmoji').value.trim(),
-        title:   document.getElementById('nrTitle').value.trim(),
-        msg:     document.getElementById('nrMsg').value.trim(),
-    };
-    fetch('/admin/nita-report/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            _updateNrStatus(payload.enabled);
-            _nrLoaded = false;
-            alert('✅ Configuración del botón Reportar guardada.\n⚠️ Recarga la página de nitalaosita para que tome efecto.');
-        }
-    });
-}
 </script>
