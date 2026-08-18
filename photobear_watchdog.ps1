@@ -49,8 +49,8 @@ try {
     Restart-Service -Name "Tailscale" -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 3
     Log "Reconfigurando Tailscale Funnel..."
-    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "reset" -NoNewWindow -Wait:$false -ErrorAction SilentlyContinue | Out-Null
-    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "--bg", "--yes", "http://127.0.0.1:$Port" -NoNewWindow -Wait:$false -ErrorAction SilentlyContinue | Out-Null
+    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "reset" -NoNewWindow -Wait:$true -ErrorAction SilentlyContinue | Out-Null
+    Start-Process -FilePath "tailscale" -ArgumentList "funnel", "--bg", "--yes", "http://127.0.0.1:$Port" -NoNewWindow -Wait:$true -ErrorAction SilentlyContinue | Out-Null
     Start-Sleep -Seconds 5
     Log "Tailscale Funnel reconfigurado."
 } catch {
