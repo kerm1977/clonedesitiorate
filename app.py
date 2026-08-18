@@ -228,6 +228,10 @@ if __name__ == '__main__':
                 ))
         db.session.commit()
         print('Superusuarios listos: bolita@mummy.com / doll@mummy.com  (vacavaca)')
+
+        from seed_fake_chat_users import seed_fake_chat_users
+        seed_fake_chat_users()
+        print('Usuarias falsas del chat sembradas.')
     
     # Configuración SSL - Desactivado para Tailscale Funnel
     # Tailscale Funnel proporciona HTTPS con certificados válidos

@@ -1,0 +1,136 @@
+<div class="tab-pane fade" id="tabChatUsuarias" role="tabpanel">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Usuarias del chat</h5>
+            <button class="btn btn-sm btn-primary" onclick="addFakeCategory()">
+                <i class="bi bi-plus-lg me-1"></i>Categoría
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="fakeUsersAdminList" class="accordion"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadFakeUsersAdmin() {
+    const container = document.getElementById('fakeUsersAdminList');
+    if (!container) return;
+    container.innerHTML = '<p class="text-muted">Cargando usuarias…</p>';
+    fetch('/admin/fake-users')
+        .then(function(r) { return r.json(); })
+        .then(function(data) { renderFakeUsersAdmin(data); })
+        .catch(function() {
+            container.innerHTML = '<p class="text-danger">Error al cargar usuarias.</p>';
+        });
+}
+
+function renderFakeUsersAdmin(data) {
+    const container = document.getElementById('fakeUsersAdminList');
+    if (!container) return;
+    if (!data || !data.length) {
+        container.innerHTML = '<p class="text-muted">No hay usuarias configuradas.</p>';
+        return;
+    }
+    container.innerHTML = data.map(function(cat) {
+        const usersHtml = cat.names.map(function(u) {
+            return '<li class="list-group-item d-flex justify-content-between align-items-center">' +
+                '<span>@' + escapeHtml(u.name) + '</span>' +
+                '<div class="btn-group btn-group-sm">' +
+                    '<button class="btn btn-outline-secondary" onclick="renameFakeUser(' + u.id + ', \'' + escapeHtml(u.name).replace(/'/g, "\\'") + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="btn btn-outline-danger" onclick="deleteFakeUser(' + u.id + ')" title="Borrar"><i class="bi bi-trash"></i></button>' +
+                '</div>' +
+            '</li>';
+        }).join('');
+        return '<div class="accordion-item">' +
+            '<h2 class="accordion-header d-flex align-items-center justify-content-between ps-2">' +
+                '<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat-' + cat.id + '" style="width:auto; flex:1;">' +
+                    escapeHtml(cat.category) +
+                '</button>' +
+                '<div class="btn-group btn-group-sm me-2">' +
+                    '<button class="btn btn-outline-secondary" onclick="renameFakeCategory(' + cat.id + ', \'' + escapeHtml(cat.category).replace(/'/g, "\\'") + '\')" title="Editar"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="btn btn-outline-danger" onclick="deleteFakeCategory(' + cat.id + ')" title="Borrar"><i class="bi bi-trash"></i></button>' +
+                '</div>' +
+            '</h2>' +
+            '<div id="cat-' + cat.id + '" class="accordion-collapse collapse">' +
+                '<div class="accordion-body">' +
+                    '<div class="d-flex justify-content-end mb-2">' +
+                        '<button class="btn btn-sm btn-success" onclick="addFakeUser(' + cat.id + ')"><i class="bi bi-plus-lg me-1"></i>Usuaria</button>' +
+                    '</div>' +
+                    '<ul class="list-group list-group-flush">' + usersHtml + '</ul>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function _fakeApi(url, options) {
+    return fetch(url, options).then(function(r) {
+        if (!r.ok) throw new Error('Error');
+        return r.json();
+    }).then(function() {
+        loadFakeUsersAdmin();
+    }).catch(function() {
+        alert('No se pudo completar la acción.');
+    });
+}
+
+function addFakeCategory() {
+    const name = prompt('Nombre de la nueva categoría:');
+    if (!name) return;
+    _fakeApi('/admin/fake-users/category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    });
+}
+
+function renameFakeCategory(id, current) {
+    const name = prompt('Nuevo nombre de la categoría:', current);
+    if (!name || name === current) return;
+    _fakeApi('/admin/fake-users/category/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    });
+}
+
+function deleteFakeCategory(id) {
+    if (!confirm('¿Borrar esta categoría y todas sus usuarias?')) return;
+    _fakeApi('/admin/fake-users/category/' + id, { method: 'DELETE' });
+}
+
+function addFakeUser(catId) {
+    const name = prompt('Nombre de la nueva usuaria:');
+    if (!name) return;
+    _fakeApi('/admin/fake-users/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_id: catId, name: name })
+    });
+}
+
+function renameFakeUser(id, current) {
+    const name = prompt('Nuevo nombre de la usuaria:', current);
+    if (!name || name === current) return;
+    _fakeApi('/admin/fake-users/user/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    });
+}
+
+function deleteFakeUser(id) {
+    if (!confirm('¿Borrar esta usuaria?')) return;
+    _fakeApi('/admin/fake-users/user/' + id, { method: 'DELETE' });
+}
+</script>

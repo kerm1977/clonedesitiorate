@@ -235,6 +235,18 @@ class ImageVote(db.Model):
     __table_args__=(db.UniqueConstraint('image_id','user_id'),)
     user=db.relationship('User',backref='image_votes')
 
+class FakeUserCategory(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    name=db.Column(db.String(200),nullable=False)
+    order=db.Column(db.Integer,default=0)
+    users=db.relationship('FakeUser',backref='category',lazy=True,cascade='all, delete-orphan',order_by='FakeUser.order')
+
+class FakeUser(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    category_id=db.Column(db.Integer,db.ForeignKey('fake_user_category.id'),nullable=False)
+    name=db.Column(db.String(100),nullable=False)
+    order=db.Column(db.Integer,default=0)
+
 class ActivityLog(db.Model):
     id=db.Column(db.Integer,primary_key=True)
     username=db.Column(db.String(80),nullable=False,index=True)

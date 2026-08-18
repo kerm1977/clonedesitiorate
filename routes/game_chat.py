@@ -25,6 +25,17 @@ def chat_page():
                            partner=request.args.get('partner', 'nitalaosita'),
                            chat_type=request.args.get('type', 'private'))
 
+
+@game_chat_bp.route('/chat/fake-users')
+@login_required
+def chat_fake_users():
+    from models import FakeUserCategory
+    cats = FakeUserCategory.query.order_by(FakeUserCategory.order, FakeUserCategory.id).all()
+    return jsonify([
+        {'category': c.name, 'names': [u.name for u in c.users]}
+        for c in cats
+    ])
+
 # Diccionario en memoria para rastrear quién está escribiendo
 # {username: {partner: timestamp}}
 _typing_status = {}

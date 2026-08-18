@@ -107,15 +107,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-const FAKE_USER_CATEGORIES = [
-    { category: 'Animales con Carácter', names: ['OsaSinCueva','PandaDormilona','CulebraCoqueta','ArdillaEscarbadora','ZorraCosmica','GatitaBerrinchuda','LeonaEnPajamas','JirafaCuriosa','TortugaAcelerada','RanaMelodramatica','AbejaSinRumbo','HienaSonriente','BúhaNocturna','LobaTranquila','FocaPerezosa','CebraSinRayas','NutriaDivertida','GaviotaGolosina','MofetaElegante','MariposaConDudas'] },
-    { category: 'Seres Fantásticos y Místicos', names: ['ElfaSinMagia','SirenaDescalza','BrujitaSinEscoba','HadaDespistada','VampiraConGluten','NinfaDelChisme','MagaSinVarita','DragonaTranquila','SombraMistica','MonstruaDeBajoDeLaCama','DiablaEnVacaciones','DiosaDelCaos','GargolaSoñadora','ValkiriaEnCamison','ZombiePerezosa'] },
-    { category: 'Naturaleza, Plantas y Clima', names: ['FlorDeCacto','RosaEspinoza','RosaSinEspinas','HojaAlViento','MargaritaDeshojada','SetaMágica','PalmeraDespeinada','MentaFresca','OrquídeaSalvaje','TormentaEnTaza','NubeDeAlgodón','BrisaPerezosa','ChispaDeLuz','OlaDeCalor','NieveDerretida'] },
-    { category: 'Culinarias y Desastres en Cocina', names: ['EmpanadaVoladora','GalletaConPicante','ArepaSinRelleno','ManzanaEnvenenada','FresitaSalvaje','SopaDeTenedor','TazaSinCafe','PapitaFritaSola','AceitunaCoqueta','CerezaDelPastel','UvaMelancolica','PalomitaQuemada','DonutSinHueco','SalsaPicosa','LimonadaCaliente'] },
-    { category: 'Profesiones Absurdas y Títulos', names: ['LicenciadaEnDramas','IngenieraEnChismes','DoctoraProcrastinación','AbogadaDePueblo','FilósofaBarata','EspecialistaEnNadas','PresidentaDelCaos','ReinaDelSofa','DuenaDelUniverso','CapitanaBarata','JefaDePrensaFalsa','MaestraDelDesastre','PolicíaDelChisme','NinjaDeCocina','DirectoraDeNada'] },
-    { category: 'Dramas y Caos Digital', names: ['BateriaEnUnPorCiento','CalculadoraSinPilas','DesastreConTacones','CrisisDeLasTresAM','Error404Femenino','MemoriaDePez','PunteriaDeTropezon','RedSinConexion','TropiezoConstante','ConfusionEterna','SuenoIncumplido','SombraSospechosa','PerfilSinFoto','MaldicionDigital','PeligroAmbulante'] },
-    { category: 'Frases, Actitudes y Ocurrencias', names: ['ChismosaOficial','SoloVinePorElChisme','TuVecinaFavorita','AlguienMeLlamo','QueAlguienMeExplique','NoSeQueHagoAqui','NoSoyUnBot','OjoAlCharco','PreguntaleAOtra','SinComentarios','UltimaEnEnterarse','UltimaHora','BuzonDeQuejas','GritoEnElVacio','SilencioIncomodo','PensandoAun','YaVuelvo','YoNoFui','ApagaYVamonos','BuscoMiLlave'] }
-];
+let fakeUserCategories = [];
+
+function loadFakeUsers() {
+    return fetch('/chat/fake-users')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            fakeUserCategories = data || [];
+        })
+        .catch(function() {
+            fakeUserCategories = [];
+        });
+}
 
 function fakeUserHash(str) {
     let h = 0;
@@ -140,7 +143,7 @@ function renderFakeUsersDropdown() {
     if (!menu) return;
     let html = '<li class="dropdown-header"><strong>Usuarias</strong> — <span id="fakeUsersCount">0</span> en línea</li><li><hr class="dropdown-divider"></li>';
     let connected = 0;
-    FAKE_USER_CATEGORIES.forEach(function(cat) {
+    fakeUserCategories.forEach(function(cat) {
         html += '<li class="dropdown-header">' + cat.category + '</li>';
         cat.names.forEach(function(name) {
             const online = isFakeUserConnected(name);
@@ -155,7 +158,7 @@ function renderFakeUsersDropdown() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    renderFakeUsersDropdown();
+    loadFakeUsers().then(renderFakeUsersDropdown);
     setInterval(renderFakeUsersDropdown, 60000);
 });
 </script>

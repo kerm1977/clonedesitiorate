@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
-from models import db, User, Image, Message, AppConfig, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage
+from models import db, User, Image, Message, AppConfig, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage, FakeUserCategory, FakeUser
 from chat_socket import _user_sids
 from datetime import datetime, timedelta
 import json
@@ -565,3 +565,103 @@ def delete_image(image_id):
                  object_id=image_id, extra='Archivo borrado físicamente')
     flash('Imagen eliminada físicamente y referencias de la base de datos.', 'success')
     return redirect(request.referrer or url_for('admin.nita_activity_history'))
+
+
+# --- Usuarias falsas del chat ---
+
+@admin_bp.route('/fake-users', methods=['GET'])
+@login_required
+def fake_users_data():
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    cats = FakeUserCategory.query.order_by(FakeUserCategory.order, FakeUserCategory.id).all()
+    return jsonify([
+        {'id': c.id, 'category': c.name, 'names': [{'id': u.id, 'name': u.name} for u in c.users]}
+        for c in cats
+    ])
+
+
+@admin_bp.route('/fake-users/category', methods=['POST'])
+@login_required
+def add_fake_category():
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Nombre de categoría requerido'}), 400
+    max_order = db.session.query(db.func.max(FakeUserCategory.order)).scalar() or 0
+    cat = FakeUserCategory(name=name, order=max_order + 1)
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify({'id': cat.id, 'name': cat.name})
+
+
+@admin_bp.route('/fake-users/category/<int:cat_id>', methods=['PUT'])
+@login_required
+def rename_fake_category(cat_id):
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    cat = FakeUserCategory.query.get_or_404(cat_id)
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Nombre requerido'}), 400
+    cat.name = name
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@admin_bp.route('/fake-users/category/<int:cat_id>', methods=['DELETE'])
+@login_required
+def delete_fake_category(cat_id):
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    cat = FakeUserCategory.query.get_or_404(cat_id)
+    db.session.delete(cat)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@admin_bp.route('/fake-users/user', methods=['POST'])
+@login_required
+def add_fake_user():
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    cat_id = data.get('category_id')
+    if not name or not cat_id:
+        return jsonify({'error': 'Nombre y categoría requeridos'}), 400
+    cat = FakeUserCategory.query.get_or_404(cat_id)
+    max_order = db.session.query(db.func.max(FakeUser.order)).filter_by(category_id=cat.id).scalar() or 0
+    user = FakeUser(category_id=cat.id, name=name, order=max_order + 1)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'id': user.id, 'name': user.name})
+
+
+@admin_bp.route('/fake-users/user/<int:user_id>', methods=['PUT'])
+@login_required
+def rename_fake_user(user_id):
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    user = FakeUser.query.get_or_404(user_id)
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Nombre requerido'}), 400
+    user.name = name
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@admin_bp.route('/fake-users/user/<int:user_id>', methods=['DELETE'])
+@login_required
+def delete_fake_user(user_id):
+    if _guard():
+        return jsonify({'error': 'No autorizado'}), 403
+    user = FakeUser.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'ok': True})
