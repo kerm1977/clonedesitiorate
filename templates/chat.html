@@ -148,15 +148,17 @@ function renderFakeUsersDropdown() {
     if (!menu) return;
     let html = '<li class="dropdown-header"><strong>Usuarias</strong> — <span id="fakeUsersCount">0</span> en línea</li><li><hr class="dropdown-divider"></li>';
     let connected = 0;
+    const users = [];
     fakeUserCategories.forEach(function(cat) {
-        html += '<li class="dropdown-header">' + cat.category + '</li>';
-        cat.names.forEach(function(name) {
-            const online = isFakeUserConnected(name);
-            if (online) connected++;
-            const dotClass = online ? 'online' : 'offline';
-            html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>' + formatAtName(name) + '</span></li>';
-        });
+        cat.names.forEach(function(name) { users.push(name); });
     });
+    users.forEach(function(name) {
+        const online = isFakeUserConnected(name);
+        if (online) connected++;
+        const dotClass = online ? 'online' : 'offline';
+        html += '<li><span class="dropdown-item-text"><span class="status-dot ' + dotClass + '"></span>' + formatAtName(name) + '</span></li>';
+    });
+    html += '<li class="dropdown-item-text text-center text-muted">Más 200</li>';
     menu.innerHTML = html;
     const countEl = document.getElementById('fakeUsersCount');
     if (countEl) countEl.textContent = connected;
