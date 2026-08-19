@@ -25,51 +25,66 @@
                          style="max-height:70vh; display:block; margin:0 auto;">
                     {% endif %}
                 </div>
-                <div class="card-body" style="background:#fff8fc;">
-                    <p class="text-center fw-bold" style="color:#3d2060; font-size:1.05rem;">
-                        Por favor relátanos tu historia cuando tomaste estas fotografías
-                    </p>
-
-                    <form action="{{ url_for('coleccion.save_story', image_id=image.id) }}" method="POST" onsubmit="return prepareStory();">
-                        <div class="btn-group w-100 mb-2 flex-wrap" role="group" aria-label="Editor">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('bold')"><i class="bi bi-type-bold"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('italic')"><i class="bi bi-type-italic"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('underline')"><i class="bi bi-type-underline"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('strikeThrough')"><i class="bi bi-type-strikethrough"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyLeft')"><i class="bi bi-text-left"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyCenter')"><i class="bi bi-text-center"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyRight')"><i class="bi bi-text-right"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyFull')"><i class="bi bi-justify"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H1')">H1</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H2')">H2</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H3')">H3</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H4')">H4</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H5')">H5</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H6')">H6</button>
-                        </div>
-
-                        <div id="storyEditor" contenteditable="true"
-                             style="min-height:150px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:1rem; outline:none; overflow-y:auto; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
-                            {{ image.story or '' }}
-                        </div>
-
-                        <textarea id="storyText" name="story" style="display:none;"></textarea>
-
-                        <div class="text-end mt-2">
-                            <button type="submit" class="btn btn-fun-pink" style="border-radius:24px;">
-                                <i class="bi bi-save me-1"></i> Guardar historia
-                            </button>
-                        </div>
-                    </form>
-
-                    {% if image.story %}
-                    <div class="mt-4 p-3" style="background:#f8f0f5; border-radius:12px;">
-                        <h6 class="fun-title mb-2" style="color:#3d2060;">Historia guardada</h6>
-                        <div style="white-space:pre-wrap; color:#3d2060; font-size:0.95rem;">{{ image.story }}</div>
-                    </div>
-                    {% endif %}
+                <div class="card-body text-center" style="background:#fff8fc;">
+                    <button type="button" class="btn btn-fun-pink" style="border-radius:24px;" data-bs-toggle="modal" data-bs-target="#storyModal">
+                        <i class="bi bi-pen me-1"></i> Redactar historia
+                    </button>
                 </div>
+            </div>
+
+            {% if image.story %}
+            <div class="mt-4 p-3" style="background:transparent; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
+                {{ image.story|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#ff6b9d,#845ec2); color:#fff;">
+                <h5 class="modal-title fun-title">Redactar historia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" style="background:#fff8fc;">
+                <p class="fw-bold" style="color:#3d2060; font-size:1rem;">
+                    Por favor relátanos tu historia cuando tomaste estas fotografías
+                </p>
+
+                <form action="{{ url_for('coleccion.save_story', image_id=image.id) }}" method="POST" onsubmit="return prepareStory();">
+                    <div class="btn-group w-100 mb-2 flex-wrap" role="group" aria-label="Editor">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('bold')"><i class="bi bi-type-bold"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('italic')"><i class="bi bi-type-italic"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('underline')"><i class="bi bi-type-underline"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('strikeThrough')"><i class="bi bi-type-strikethrough"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyLeft')"><i class="bi bi-text-left"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyCenter')"><i class="bi bi-text-center"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyRight')"><i class="bi bi-text-right"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyFull')"><i class="bi bi-justify"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H1')">H1</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H2')">H2</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H3')">H3</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H4')">H4</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H5')">H5</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H6')">H6</button>
+                    </div>
+
+                    <div id="storyEditor" contenteditable="true"
+                         style="min-height:180px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:1rem; outline:none; overflow-y:auto; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
+                        {{ (image.story or '')|safe }}
+                    </div>
+
+                    <textarea id="storyText" name="story" style="display:none;"></textarea>
+
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-fun-pink" style="border-radius:24px;">
+                            <i class="bi bi-save me-1"></i> Guardar historia
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -84,7 +99,7 @@ function execCmd(command, value) {
 function prepareStory() {
     const editor = document.getElementById('storyEditor');
     const textarea = document.getElementById('storyText');
-    textarea.value = editor.innerText;
+    textarea.value = editor.innerHTML;
     return true;
 }
 </script>
