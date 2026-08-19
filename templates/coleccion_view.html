@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Ver más — Galería Rosa{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="card border-0 shadow-sm" style="border-radius:16px; overflow:hidden;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#ff6b9d,#845ec2); color:#fff;">
+                    <h5 class="mb-0 fun-title">{{ image.filename }}</h5>
+                    <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm btn-light">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </a>
+                </div>
+                <div class="card-body p-0 text-center" style="background:#000;">
+                    {% if image.is_video %}
+                    <video src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
+                           alt="{{ image.filename }}"
+                           controls autoplay muted loop
+                           style="max-height:70vh; max-width:100%; display:block; margin:0 auto;"></video>
+                    {% else %}
+                    <img src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
+                         alt="{{ image.filename }}"
+                         class="img-fluid"
+                         style="max-height:70vh; display:block; margin:0 auto;">
+                    {% endif %}
+                </div>
+                <div class="card-body" style="background:#fff8fc;">
+                    <p class="text-center fw-bold" style="color:#3d2060; font-size:1.05rem;">
+                        Por favor relátanos tu historia cuando tomaste estas fotografías
+                    </p>
+
+                    <form action="{{ url_for('coleccion.save_story', image_id=image.id) }}" method="POST" onsubmit="return prepareStory();">
+                        <div class="btn-group w-100 mb-2 flex-wrap" role="group" aria-label="Editor">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('bold')"><i class="bi bi-type-bold"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('italic')"><i class="bi bi-type-italic"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('underline')"><i class="bi bi-type-underline"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('strikeThrough')"><i class="bi bi-type-strikethrough"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyLeft')"><i class="bi bi-text-left"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyCenter')"><i class="bi bi-text-center"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyRight')"><i class="bi bi-text-right"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('justifyFull')"><i class="bi bi-justify"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H1')">H1</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H2')">H2</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H3')">H3</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H4')">H4</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H5')">H5</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="execCmd('formatBlock', 'H6')">H6</button>
+                        </div>
+
+                        <div id="storyEditor" contenteditable="true"
+                             style="min-height:150px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:1rem; outline:none; overflow-y:auto; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
+                            {{ image.story or '' }}
+                        </div>
+
+                        <textarea id="storyText" name="story" style="display:none;"></textarea>
+
+                        <div class="text-end mt-2">
+                            <button type="submit" class="btn btn-fun-pink" style="border-radius:24px;">
+                                <i class="bi bi-save me-1"></i> Guardar historia
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if image.story %}
+                    <div class="mt-4 p-3" style="background:#f8f0f5; border-radius:12px;">
+                        <h6 class="fun-title mb-2" style="color:#3d2060;">Historia guardada</h6>
+                        <div style="white-space:pre-wrap; color:#3d2060; font-size:0.95rem;">{{ image.story }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function execCmd(command, value) {
+    document.execCommand(command, false, value || null);
+    document.getElementById('storyEditor').focus();
+}
+
+function prepareStory() {
+    const editor = document.getElementById('storyEditor');
+    const textarea = document.getElementById('storyText');
+    textarea.value = editor.innerText;
+    return true;
+}
+</script>
+{% endblock %}

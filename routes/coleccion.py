@@ -292,6 +292,24 @@ def delete_opinion(opinion_id):
     return redirect(url_for('coleccion.index'))
 
 
+@coleccion_bp.route('/view/<int:image_id>')
+@login_required
+def view(image_id):
+    img = Image.query.get_or_404(image_id)
+    return render_template('coleccion_view.html', image=img)
+
+
+@coleccion_bp.route('/view/<int:image_id>/story', methods=['POST'])
+@login_required
+def save_story(image_id):
+    img = Image.query.get_or_404(image_id)
+    story = request.form.get('story', '').strip()
+    img.story = story
+    db.session.commit()
+    flash('Historia guardada', 'success')
+    return redirect(url_for('coleccion.view', image_id=image_id))
+
+
 @coleccion_bp.route('/file/<path:filename>')
 @login_required
 def serve_file(filename):

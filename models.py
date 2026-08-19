@@ -16,6 +16,7 @@ class Image(db.Model):
     folder=db.Column(db.String(500))
     active=db.Column(db.Boolean,default=True)
     has_confetti=db.Column(db.Boolean,default=False)
+    story=db.Column(db.Text,nullable=True)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
     votes=db.relationship('ImageVote',backref='image',lazy=True,cascade='all, delete-orphan')
 
