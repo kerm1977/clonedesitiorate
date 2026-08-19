@@ -167,7 +167,7 @@ function renderFakeUsersDropdown() {
         const dotClass = online ? 'online' : 'offline';
         html += '<li><a class="dropdown-item fake-user-item d-flex align-items-center" href="#" data-name="' + escapeHtml(name) + '"><span class="status-dot ' + dotClass + ' me-2"></span>' + formatAtName(name) + '</a></li>';
     });
-    html += '<li class="dropdown-item-text text-center text-muted">Más 200</li>';
+    html += '<li class="dropdown-item-text text-center text-white">Más 200</li>';
     menu.innerHTML = html;
     menu.querySelectorAll('.fake-user-item').forEach(function(el) {
         el.addEventListener('click', function(e) {
