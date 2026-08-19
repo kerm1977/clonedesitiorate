@@ -5,31 +5,25 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-8">
-            <div class="card border-0 shadow-sm" style="border-radius:16px; overflow:hidden;">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#ff6b9d,#845ec2); color:#fff;">
-                    <h5 class="mb-0 fun-title">{{ image.filename }}</h5>
-                    <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm btn-light">
-                        <i class="bi bi-arrow-left"></i> Volver
-                    </a>
-                </div>
-                <div class="card-body p-0 text-center" style="background:#000;">
-                    {% if image.is_video %}
-                    <video src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
-                           alt="{{ image.filename }}"
-                           controls autoplay muted loop
-                           style="max-height:70vh; max-width:100%; display:block; margin:0 auto;"></video>
-                    {% else %}
-                    <img src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
-                         alt="{{ image.filename }}"
-                         class="img-fluid"
-                         style="max-height:70vh; display:block; margin:0 auto;">
-                    {% endif %}
-                </div>
-                <div class="card-body text-center" style="background:#fff8fc;">
-                    <button type="button" class="btn btn-fun-pink" style="border-radius:24px;" data-bs-toggle="modal" data-bs-target="#storyModal">
-                        <i class="bi bi-pen me-1"></i> Redactar historia
-                    </button>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 fun-title" style="color:#3d2060;">{{ image.filename }}</h5>
+                <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+
+            <div class="text-center" style="background:#000; border-radius:16px; overflow:hidden;">
+                {% if image.is_video %}
+                <video src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
+                       alt="{{ image.filename }}"
+                       controls autoplay muted loop
+                       style="max-height:70vh; max-width:100%; display:block; margin:0 auto;"></video>
+                {% else %}
+                <img src="{{ url_for('coleccion.serve_file', filename=image.filename) }}"
+                     alt="{{ image.filename }}"
+                     class="img-fluid"
+                     style="max-height:70vh; display:block; margin:0 auto;">
+                {% endif %}
             </div>
 
             {% if image.story %}
@@ -40,6 +34,14 @@
         </div>
     </div>
 </div>
+
+<button type="button" class="btn btn-fun-pink" title="Redactar historia"
+        data-bs-toggle="modal" data-bs-target="#storyModal"
+        style="position:fixed; bottom:78px; right:20px; z-index:9999; width:52px; height:52px; border-radius:50%;
+               background:linear-gradient(135deg,#ff6b9d,#845ec2); border:none; color:#fff; font-size:1.6rem;
+               box-shadow:0 4px 16px rgba(132,94,194,0.5); display:flex; align-items:center; justify-content:center;">
+    <i class="bi bi-plus-lg"></i>
+</button>
 
 <div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
