@@ -32,7 +32,29 @@
                 {% endif %}
             </div>
 
-            <div class="mt-4 p-3" style="background:#fff8fc; border-radius:12px;">
+            <div class="mt-4 text-center">
+                <button type="button" class="btn btn-fun-pink" data-bs-toggle="modal" data-bs-target="#storyModal" style="border-radius:24px;">
+                    <i class="bi bi-plus-lg me-1"></i> Agregar historia
+                </button>
+            </div>
+
+            {% if image.story %}
+            <div class="mt-4 p-3" style="background:transparent; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
+                {{ image.story|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#ff6b9d,#845ec2); color:#fff;">
+                <h5 class="modal-title fun-title">Redactar historia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" style="background:#fff8fc;">
                 <p class="fw-bold" style="color:#3d2060; font-size:1rem;">
                     Por favor relátanos tu historia cuando tomaste estas fotografías
                 </p>
@@ -70,12 +92,6 @@
                     </div>
                 </form>
             </div>
-
-            {% if image.story %}
-            <div class="mt-4 p-3" style="background:transparent; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
-                {{ image.story|safe }}
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
