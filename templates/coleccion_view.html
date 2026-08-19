@@ -32,11 +32,11 @@
                 {% endif %}
             </div>
 
-            <div class="mt-4 text-center">
-                <button type="button" class="btn btn-fun-pink" data-bs-toggle="modal" data-bs-target="#storyModal" style="border-radius:24px;">
-                    <i class="bi bi-plus-lg me-1"></i> Agregar historia
-                </button>
+            {% if not image.story %}
+            <div class="mt-4 p-3 text-center" style="background:transparent; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem;">
+                <em>Toca el botón <strong>+</strong> para contar la historia de esta imagen.</em>
             </div>
+            {% endif %}
 
             {% if image.story %}
             <div class="mt-4 p-3" style="background:transparent; color:#3d2060; font-family:'Nunito',sans-serif; font-size:0.95rem; text-align:left;">
@@ -46,6 +46,13 @@
         </div>
     </div>
 </div>
+
+<button type="button" title="Agregar historia" data-bs-toggle="modal" data-bs-target="#storyModal"
+        style="position:fixed; bottom:78px; right:20px; z-index:9999; width:52px; height:52px; border-radius:50%;
+               background:linear-gradient(135deg,#ff6b9d,#845ec2); border:none; color:#fff; font-size:1.6rem;
+               box-shadow:0 4px 16px rgba(132,94,194,0.5); cursor:pointer; display:flex; align-items:center; justify-content:center;">
+    <i class="bi bi-plus-lg"></i>
+</button>
 
 <div class="modal fade" id="storyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
