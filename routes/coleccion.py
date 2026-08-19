@@ -296,7 +296,11 @@ def delete_opinion(opinion_id):
 @login_required
 def view(image_id):
     img = Image.query.get_or_404(image_id)
-    return render_template('coleccion_view.html', image=img)
+    if _is_safe_path(COLECCION_FOLDER, img.filepath) and os.path.isfile(img.filepath):
+        media_url = url_for('coleccion.serve_file', filename=img.filename)
+    else:
+        media_url = url_for('game.serve_image', image_id=img.id)
+    return render_template('coleccion_view.html', image=img, media_url=media_url)
 
 
 @coleccion_bp.route('/view/<int:image_id>/story', methods=['POST'])
