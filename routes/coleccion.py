@@ -300,7 +300,14 @@ def view(image_id):
         media_url = url_for('coleccion.serve_file', filename=img.filename)
     else:
         media_url = url_for('game.serve_image', image_id=img.id)
-    return render_template('coleccion_view.html', image=img, media_url=media_url)
+    like_count = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
+    dislike_count = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
+    user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=current_user.id).first()
+    is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
+    return render_template('coleccion_view.html', image=img, media_url=media_url,
+                           like_count=like_count, dislike_count=dislike_count,
+                           user_vote=user_vote.vote_type if user_vote else None,
+                           is_moderator=is_moderator)
 
 
 @coleccion_bp.route('/view/<int:image_id>/story', methods=['POST'])

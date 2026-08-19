@@ -23,7 +23,7 @@
                  data-dislike-count="{{ f.dislike_count or 0 }}"
                  data-user-vote="{{ f.user_vote or '' }}"
                  style="height:180px; cursor:pointer; position:relative; overflow:hidden;"
-                 onclick="openMediaVoteModal(Number(this.dataset.imageId), this.dataset.viewUrl, this.dataset.filename, this.dataset.type, this.dataset.download, this.dataset.likeCount, this.dataset.dislikeCount, this.dataset.userVote)">
+                 onclick="{% if f.image_id %}window.location.href='{{ url_for('coleccion.view', image_id=f.image_id) }}'{% endif %}">
                 {% if f.thumb %}
                 <img src="{{ f.thumb }}" class="w-100" style="height:180px; object-fit:cover; pointer-events:none;">
                 {% else %}
@@ -52,7 +52,7 @@
                      data-user-vote="{{ f.user_vote or '' }}"
                      class="w-100" style="height:180px; object-fit:cover; cursor:pointer;"
                      alt="{{ f.name }}"
-                     onclick="openMediaVoteModal(Number(this.dataset.imageId), this.dataset.viewUrl, this.dataset.filename, this.dataset.type, this.dataset.download, this.dataset.likeCount, this.dataset.dislikeCount, this.dataset.userVote)">
+                     onclick="{% if f.image_id %}window.location.href='{{ url_for('coleccion.view', image_id=f.image_id) }}'{% endif %}">
                 {% if f.image_id and is_moderator %}
                 <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-dislike="{{ f.dislike_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
                     <button type="button" class="vote-like {{ 'voted-like' if f.user_vote == 'like' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ f.like_count or 0 }}</span></button>
@@ -66,13 +66,6 @@
                 <span class="badge bg-info text-dark mt-1" style="font-size:0.65rem;">
                     <i class="bi bi-download me-1"></i>{{ f.download_count or 0 }}
                 </span>
-                {% if f.image_id %}
-                <div class="mt-2">
-                    <a href="{{ url_for('coleccion.view', image_id=f.image_id) }}" class="btn btn-sm w-100" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border:none;border-radius:8px;font-size:0.75rem;">
-                        <i class="bi bi-eye me-1"></i>Ver más
-                    </a>
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
