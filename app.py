@@ -14,6 +14,27 @@ from utils import get_session_id
 
 socketio = SocketIO()
 
+
+class HostFixMiddleware(object):
+    """WSGI middleware that overrides HTTP_HOST to localhost.
+
+    Tailscale Funnel and other reverse proxies send the real domain in the
+    Host header.  Flask/Werkzeug computes a subdomain from it and our
+    game_bp routes (no subdomain) stop matching, causing a 404.  Forcing the
+    Host header to the local loopback keeps Flask routing stable while
+    preserving the original host in HTTP_X_FORWARDED_HOST.
+    """
+    def __init__(self, app, default_host='127.0.0.1:8090'):
+        self.app = app
+        self.default_host = default_host
+
+    def __call__(self, environ, start_response):
+        if 'HTTP_HOST' in environ:
+            environ['HTTP_X_FORWARDED_HOST'] = environ['HTTP_HOST']
+            environ['HTTP_HOST'] = self.default_host
+        return self.app(environ, start_response)
+
+
 # Credenciales de superusuario
 SUPERUSERS = [
     {
@@ -40,6 +61,8 @@ def create_app():
     db.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet',
                       ping_timeout=60, ping_interval=1)
+    # Envolver el WSGI final para forzar Host local y evitar 404 con Tailscale
+    app.wsgi_app = HostFixMiddleware(app.wsgi_app)
 
     @app.teardown_appcontext
     def _close_db(exc):
