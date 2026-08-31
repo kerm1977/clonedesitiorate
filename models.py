@@ -267,3 +267,40 @@ class ImageDownload(db.Model):
     username=db.Column(db.String(100),nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
     image=db.relationship('Image',backref='downloads')
+
+class Topic(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+    title=db.Column(db.String(200),nullable=False)
+    description=db.Column(db.Text,nullable=True)
+    link=db.Column(db.String(500),nullable=True)
+    image_path=db.Column(db.String(500),nullable=True)
+    published_at=db.Column(db.DateTime,default=datetime.utcnow)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    user=db.relationship('User',backref='topics')
+    replies=db.relationship('TopicReply',backref='topic',lazy=True,cascade='all, delete-orphan',order_by='TopicReply.created_at')
+
+class TopicReply(db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    topic_id=db.Column(db.Integer,db.ForeignKey('topic.id'),nullable=False)
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+    display_name=db.Column(db.String(100),nullable=True)
+    content=db.Column(db.Text,nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    user=db.relationship('User',backref='topic_replies')
+
+class AdminNotification(db.Model):
+    __tablename__='admin_notification'
+    id=db.Column(db.Integer,primary_key=True)
+    recipient_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=False)
+    actor_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True)
+    type=db.Column(db.String(50),nullable=False,default='nita_topic_reply')
+    topic_id=db.Column(db.Integer,db.ForeignKey('topic.id'),nullable=True)
+    reply_id=db.Column(db.Integer,db.ForeignKey('topic_reply.id'),nullable=True)
+    message=db.Column(db.Text,nullable=False)
+    is_read=db.Column(db.Boolean,default=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    recipient=db.relationship('User',foreign_keys=[recipient_id],backref='admin_notifications',lazy=True)
+    actor=db.relationship('User',foreign_keys=[actor_id],backref='admin_notifications_sent',lazy=True)
+    topic=db.relationship('Topic',backref='admin_notifications')
+    reply=db.relationship('TopicReply',backref='admin_notifications')

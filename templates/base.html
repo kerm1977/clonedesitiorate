@@ -49,6 +49,9 @@
         .chat-modal-header .fun-title { color: #fff; font-size: 1.1rem; }
         .chat-modal-header .btn-light  { background: rgba(255,255,255,0.2); border: none; color: #fff; }
         .chat-modal-header .btn-outline-light { border-color: rgba(255,255,255,0.5); color: #fff; }
+        .chat-modal-header { flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .chat-modal-header h5 { flex-wrap: wrap; }
+        .chat-modal-header h5 .btn, .chat-modal-header > div .btn { white-space: nowrap; }
         .chat-messages {
             overflow-y: auto;
             padding: 1rem;
@@ -251,6 +254,31 @@
             display: inline-flex;
             margin: 8px auto;
         }
+    /* Botones simétricos y consistentes en todo el sitio */
+    .btn:not(.btn-close), .btn-sm:not(.btn-close), .btn-lg:not(.btn-close) {
+        border-radius: 50rem !important;
+        padding: 0.45rem 1.1rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        line-height: 1.5 !important;
+        text-transform: none !important;
+        border: 1px solid #f8c8dc !important;
+        background-color: #fff0f5 !important;
+        color: #b76e8c !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease;
+    }
+    .btn:hover:not(.btn-close):not(:disabled) {
+        background-color: #ff6b9d !important;
+        border-color: #ff6b9d !important;
+        color: #fff !important;
+        box-shadow: 0 4px 12px rgba(255, 107, 157, 0.25) !important;
+        transform: translateY(-1px);
+    }
+    .btn:disabled, .btn.disabled {
+        opacity: 0.45 !important;
+        pointer-events: none !important;
+    }
     </style>
 </head>
 <body>
@@ -260,6 +288,18 @@
         <div class="d-flex gap-2 align-items-center">
             {% if current_user.is_authenticated %}
             <button id="privateChatBtn" style="display: none;"></button>
+            <a href="{{ url_for('game_chat.chat_page') }}" class="btn btn-sm position-relative" title="Chat">
+                <i class="bi bi-chat-dots"></i>
+                {% if chat_unread_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;">
+                    {{ chat_unread_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="pushNotificationsBtn" class="btn btn-sm" title="Activar notificaciones">🔕</button>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm" title="Salir">
+                <i class="bi bi-box-arrow-right"></i> Salir
+            </a>
             {% endif %}
             {% if player_name %}
             <form action="{{ url_for('game.clear_name') }}" method="POST" class="m-0">
@@ -275,17 +315,52 @@
             {% endif %}
             {% if current_user.is_authenticated %}
                 {% if current_user.is_superuser %}
+                <button class="btn btn-fun-white btn-sm position-relative" type="button" data-bs-toggle="modal" data-bs-target="#notifModal" title="Notificaciones">
+                    <i class="bi bi-bell"></i>
+                    {% if notification_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;">
+                        {{ notification_count }}
+                    </span>
+                    {% endif %}
+                </button>
                 <a href="{{ url_for('admin.admin') }}" class="btn btn-fun-yellow btn-sm">
                     ⚙️ Admin
                 </a>
                 {% endif %}
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-fun-white btn-sm" title="Cerrar sesión">
-                    <i class="bi bi-box-arrow-right"></i> Salir
-                </a>
             {% endif %}
         </div>
     </div>
 </nav>
+
+{% if community_active and current_user.is_authenticated and current_user.username == 'nitalaosita' %}
+<div id="communityMessageBar" class="community-message-bar text-center py-3" style="background: linear-gradient(145deg, #fff0fc, #f0eeff); border-bottom: 3px solid var(--pink);">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+            <h5 class="fw-bold mb-0" style="color: #3d2060;">{{ community_title }}</h5>
+            <span class="text-muted d-none d-md-inline">{{ community_subtitle }}</span>
+            <span class="fw-bold" style="color: var(--pink);">{{ community_message }}</span>
+            <button id="dismissCommunity" class="btn btn-sm" title="Ya no mostrar más">
+                <i class="bi bi-x-lg"></i> Ya no
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+(function(){
+    var bar = document.getElementById('communityMessageBar');
+    if (localStorage.getItem('hideCommunity') === '1' && bar) {
+        bar.style.display = 'none';
+    }
+    var btn = document.getElementById('dismissCommunity');
+    if (btn) {
+        btn.addEventListener('click', function(){
+            localStorage.setItem('hideCommunity', '1');
+            if (bar) bar.style.display = 'none';
+        });
+    }
+})();
+</script>
+{% endif %}
 
 <!-- Floating PWA Install Button -->
 <button id="installPWA" class="pwa-install-btn" style="display: none;" title="Instalar App">
@@ -306,8 +381,6 @@
 {% endwith %}
 
 {% block content %}{% endblock %}
-
-<script src="{{ url_for('static', filename='js/push-notifications.min.js') }}?v=2"></script>
 
 <!-- Conózcanos Modal -->
 {% if about and about.content %}
@@ -442,7 +515,7 @@
 
 <!-- Botón flotante Chat Individual -->
 <button id="chatFabBtn" class="btn-pulse" onclick="{% if current_user.username == 'nitalaosita' %}openModeratorChat(){% elif current_user.is_superuser %}openSuperModeratorChat(){% else %}openChat('nitalaosita'){% endif %}" title="Chat Individual"
-    style="position:fixed;bottom:144px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
+    style="position:fixed;bottom:25px;right:20px;z-index:9999;width:52px;height:52px;border-radius:50%;
            background:linear-gradient(135deg,#845ec2,#6c3fb0);border:none;color:#fff;font-size:1.4rem;
            box-shadow:0 4px 16px rgba(132,94,194,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;">
     🛡️
@@ -560,6 +633,39 @@
 </div>
 {% endif %}
 
+<!-- Notificaciones del administrador -->
+{% if current_user.is_authenticated and current_user.is_superuser %}
+<div class="modal fade" id="notifModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:none;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);">
+                <h5 class="modal-title text-white fw-bold"><i class="bi bi-bell me-2"></i>Notificaciones</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0" style="max-height:380px;overflow-y:auto;background:#fff;">
+                {% if unread_notifications %}
+                <div class="list-group list-group-flush">
+                    {% for n in unread_notifications %}
+                    <a href="{{ url_for('topics.mark_notification_read', notif_id=n.id) }}" class="list-group-item list-group-item-action p-3 {% if not n.is_read %}fw-bold{% else %}text-muted{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="mb-1">{{ n.message }}</small>
+                            <small class="text-muted" style="font-size:0.7rem;white-space:nowrap;">{{ n.created_at.strftime('%d/%m %H:%M') }}</small>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted p-4">
+                    <i class="bi bi-bell-slash display-6 d-block mb-2"></i>
+                    <p class="mb-0 small">No hay notificaciones</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Superusuario: aviso de conexión de nitalaosita -->
 {% if current_user.is_authenticated and current_user.is_superuser %}
 <div class="modal fade" id="nitaOnlineModal" tabindex="-1" style="z-index:1200;">
@@ -663,22 +769,22 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content chat-modal">
             <div class="modal-header chat-modal-header">
-                <h5 class="fun-title mb-0 d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-light" onclick="window.history.back()">
-                        <i class="bi bi-arrow-left"></i> Volver atrás
+                <h5 class="mb-0 d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="window.history.back()">
+                        <i class="bi bi-arrow-left"></i><span class="d-none d-md-inline ms-1">Volver atrás</span>
                     </button>
-                    <span>Chat</span>
+                    <span class="fun-title">Chat</span>
                     <span id="chatPartnerName" class="badge rounded-pill" style="display:none; background:rgba(255,255,255,.25); color:#fff; font-size:.8rem; padding:.25rem .6rem;"></span>
                     <div class="dropdown ms-2">
-                        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Usuarias
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-people"></i><span class="d-none d-md-inline ms-1">Usuarias</span>
                         </button>
                         <ul id="fakeUsersDropdown" class="dropdown-menu dropdown-menu-dark" style="max-height: 420px; overflow-y: auto; min-width: 240px;">
                             <li class="dropdown-header text-center">Cargando usuarias…</li>
                         </ul>
                     </div>
                 </h5>
-                <div class="d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
                     <button class="btn btn-sm btn-outline-light" id="refreshChatBtn" title="Actualizar mensajes">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
@@ -728,7 +834,7 @@
                     <div id="emojiPicker" class="emoji-picker" style="display: none;"></div>
                 </div>
                 <div class="d-flex justify-content-end mt-2">
-                    <a href="{{ url_for('coleccion.index') }}" class="btn btn-fun-pink rounded-pill btn-sm" style="box-shadow: 0 2px 6px rgba(0,0,0,.15);">
+                    <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-collection"></i> Ir a colección
                     </a>
                 </div>
@@ -992,7 +1098,8 @@ function addNitaActivity(data) {
 function initSocket() {
     if (socket) return;
     socket = io({
-        transports: ['polling'],
+        transports: ['websocket', 'polling'],
+        closeOnBeforeunload: false,
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 100,
@@ -1507,6 +1614,13 @@ function initNitaAdminModal() {
 let _confirmModal = null;
 let _confirmCallback = null;
 
+function confirmDeleteTopic(topicId, title) {
+    showConfirm('¿Borrar el tema "' + title + '"? Esta acción no se puede deshacer.', () => {
+        const form = document.getElementById('deleteTopicForm' + topicId);
+        if (form) form.submit();
+    }, { emoji: '🗑️', okLabel: 'Borrar', danger: true });
+}
+
 function showConfirm(msg, onOk, opts) {
     opts = opts || {};
     document.getElementById('confirmModalMsg').textContent = msg;
@@ -1686,7 +1800,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Actualizar badge de mensajes no leídos
     updateUnreadBadge();
-    setInterval(updateUnreadBadge, 10000);
+    setInterval(updateUnreadBadge, 30000);
     
     // Iniciar Socket.IO y badge al cargar página
     initSocket();
@@ -2481,38 +2595,26 @@ window.isVoteModerator = window.currentUsername === 'nitalaosita' ||
                          window.currentUsername === 'lausita' ||
                          '{{ current_user.is_superuser if current_user.is_authenticated else False }}' === 'True';
 
-function makeVoteOverlayHTML(imageId, likeCount, dislikeCount, userVote) {
+function makeVoteOverlayHTML(imageId, likeCount, userVote) {
     if (!window.isVoteModerator) return '';
     likeCount = likeCount || 0;
-    dislikeCount = dislikeCount || 0;
     const likeClass = userVote === 'like' ? 'voted-like' : '';
-    const dislikeClass = userVote === 'dislike' ? 'voted-dislike' : '';
-    return `<div class="vote-overlay" data-image-id="${imageId}" data-like="${likeCount}" data-dislike="${dislikeCount}" data-user-vote="${userVote || ''}">
+    return `<div class="vote-overlay" data-image-id="${imageId}" data-like="${likeCount}" data-user-vote="${userVote || ''}">
         <button type="button" class="vote-like ${likeClass}" onclick="event.stopPropagation(); voteImage(${imageId}, 'like');" title="Me gusta">
             <i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">${likeCount}</span>
-        </button>
-        <button type="button" class="vote-dislike ${dislikeClass}" onclick="event.stopPropagation(); voteImage(${imageId}, 'dislike');" title="No me gusta">
-            <i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">${dislikeCount}</span>
         </button>
     </div>`;
 }
 
-function updateAllVoteBars(imageId, likeCount, dislikeCount, userVote) {
+function updateAllVoteBars(imageId, likeCount, userVote) {
     document.querySelectorAll(`.vote-overlay[data-image-id="${imageId}"]`).forEach(bar => {
         bar.dataset.like = likeCount;
-        bar.dataset.dislike = dislikeCount;
         bar.dataset.userVote = userVote || '';
         const likeBtn = bar.querySelector('.vote-like');
-        const dislikeBtn = bar.querySelector('.vote-dislike');
         if (likeBtn) {
             likeBtn.classList.toggle('voted-like', userVote === 'like');
             const c = likeBtn.querySelector('.like-count');
             if (c) c.textContent = likeCount;
-        }
-        if (dislikeBtn) {
-            dislikeBtn.classList.toggle('voted-dislike', userVote === 'dislike');
-            const c = dislikeBtn.querySelector('.dislike-count');
-            if (c) c.textContent = dislikeCount;
         }
     });
 }
@@ -2528,7 +2630,7 @@ function voteImage(imageId, voteType) {
         .then(r => r.json())
         .then(d => {
             if (d.success) {
-                updateAllVoteBars(imageId, d.like_count, d.dislike_count, d.user_vote);
+                updateAllVoteBars(imageId, d.like_count, d.user_vote);
             } else {
                 alert(d.error || 'Error al votar');
             }
@@ -2536,11 +2638,10 @@ function voteImage(imageId, voteType) {
         .catch(() => alert('Error al votar'));
 }
 
-function openMediaVoteModal(imageId, url, filename, type, download, likeCount, dislikeCount, userVote) {
+function openMediaVoteModal(imageId, url, filename, type, download, likeCount, userVote) {
     if (!imageId) return;
     filename = filename || 'Archivo';
     likeCount = likeCount || 0;
-    dislikeCount = dislikeCount || 0;
     let mediaHtml = '';
     if (type === 'video') {
         mediaHtml = `<video src="${url}" controls autoplay muted loop style="max-width:100%;max-height:70vh;border-radius:12px;display:block;margin:0 auto;"></video>`;
@@ -2549,7 +2650,7 @@ function openMediaVoteModal(imageId, url, filename, type, download, likeCount, d
     } else {
         mediaHtml = `<img src="${url}" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;display:block;margin:0 auto;" alt="${filename}">`;
     }
-    const overlay = makeVoteOverlayHTML(imageId, likeCount, dislikeCount, userVote);
+    const overlay = makeVoteOverlayHTML(imageId, likeCount, userVote);
     const modal = document.createElement('div');
     modal.className = 'media-vote-modal';
     modal.innerHTML = `
@@ -2566,5 +2667,8 @@ function openMediaVoteModal(imageId, url, filename, type, download, likeCount, d
     document.body.appendChild(modal);
 }
 </script>
+
+<script src="{{ url_for('static', filename='js/push-notifications.js') }}?v=3"></script>
+
 </body>
 </html>

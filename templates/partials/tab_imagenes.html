@@ -1,4 +1,4 @@
-<div class="tab-pane fade" id="tabImagenes" role="tabpanel">
+<div class="tab-pane fade show active" id="tabImagenes" role="tabpanel">
 
     <!-- Fuentes activas -->
     <div class="admin-card mb-4">
@@ -130,7 +130,17 @@
             <span class="badge bg-secondary ms-2">{{ images_count }}</span>
             <span class="badge bg-danger ms-1">{{ videos_count }} videos</span>
             {% if images %}
-            <button class="btn btn-outline-danger btn-sm ms-auto" onclick="openResetModal()">
+            <form action="{{ url_for('admin_media.activate_all_images') }}" method="POST" class="d-inline ms-auto" onsubmit="return confirm('¿Activar todas las imágenes y videos?')">
+                <button type="submit" class="btn btn-outline-success btn-sm me-2">
+                    <i class="bi bi-check2-all me-1"></i>Activar todo
+                </button>
+            </form>
+            <form action="{{ url_for('admin_media.deactivate_all_images') }}" method="POST" class="d-inline me-2" onsubmit="return confirm('¿Desactivar todas las imágenes y videos?')">
+                <button type="submit" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-x-lg me-1"></i>Desactivar todo
+                </button>
+            </form>
+            <button class="btn btn-outline-danger btn-sm" onclick="openResetModal()">
                 <i class="bi bi-trash3 me-1"></i>Limpiar todo
             </button>
             {% endif %}
@@ -172,7 +182,7 @@
             </div>
             <div class="modal-body">
                 <div id="resetStep1">
-                    <p class="text-white mb-1">Esta acción eliminará <strong class="text-danger">{{ images|length }} imágenes</strong> del registro.</p>
+                    <p class="text-white mb-1">Esta acción eliminará <strong class="text-danger">{{ images_count }} imágenes</strong> del registro.</p>
                     <p class="text-muted small">Imágenes subidas por web también se borran del disco. Las de carpetas del sistema solo se eliminan del registro.</p>
                     <button class="btn btn-warning w-100 mt-2" onclick="resetStep(2)">⚠️ Entendido, continuar</button>
                 </div>

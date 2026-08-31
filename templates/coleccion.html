@@ -9,20 +9,23 @@
         <span class="badge bg-info text-dark">{{ visible_user_count }} Usuarios en este sitio</span>
     </p>
 
-    <div class="d-flex justify-content-center gap-2 mb-4" id="coleccionFilters">
-        <a href="#" data-filter="all" class="btn btn-sm {{ 'btn-primary' if filter_type == 'all' else 'btn-outline-secondary' }}" title="Ver todo" onclick="loadColeccionFilter('all'); return false;">
-            <i class="bi bi-grid-3x3-gap"></i> Todo
+    <div class="d-flex flex-wrap justify-content-center align-items-center gap-2 mb-4" id="coleccionFilters">
+        <a href="#" data-filter="all" class="btn btn-sm {{ 'btn-primary' if filter_type == 'all' else 'btn-outline-secondary' }}" title="Ver todo" aria-label="Ver todo" onclick="loadColeccionFilter('all'); return false;">
+            <i class="bi bi-grid-3x3-gap"></i>
         </a>
-        <a href="#" data-filter="images" class="btn btn-sm {{ 'btn-primary' if filter_type == 'images' else 'btn-outline-secondary' }}" title="Solo imágenes" onclick="loadColeccionFilter('images'); return false;">
-            <i class="bi bi-image"></i> Imágenes
+        <a href="#" data-filter="images" class="btn btn-sm {{ 'btn-primary' if filter_type == 'images' else 'btn-outline-secondary' }}" title="Solo imágenes" aria-label="Solo imágenes" onclick="loadColeccionFilter('images'); return false;">
+            <i class="bi bi-image"></i>
         </a>
-        <a href="#" data-filter="videos" class="btn btn-sm {{ 'btn-primary' if filter_type == 'videos' else 'btn-outline-secondary' }}" title="Solo videos" onclick="loadColeccionFilter('videos'); return false;">
-            <i class="bi bi-camera-video"></i> Videos
+        <a href="#" data-filter="videos" class="btn btn-sm {{ 'btn-primary' if filter_type == 'videos' else 'btn-outline-secondary' }}" title="Solo videos" aria-label="Solo videos" onclick="loadColeccionFilter('videos'); return false;">
+            <i class="bi bi-camera-video"></i>
         </a>
         {% if current_user.is_authenticated and (current_user.is_superuser or current_user.username in ['nita','lausita','nitalaosita']) %}
         <button type="button" class="btn btn-sm btn-outline-success" title="Subir material" onclick="openNitaUploadModal()">
             <i class="bi bi-cloud-upload"></i> Subir material
         </button>
+        <a href="{{ url_for('topics.index') }}" class="btn btn-sm btn-outline-primary" title="Temas">
+            <i class="bi bi-journal-text"></i> Temas
+        </a>
         {% endif %}
     </div>
 

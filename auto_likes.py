@@ -7,9 +7,11 @@ comments until the cumulative total reaches MAX_TOTAL_LIKES.
 import random
 import threading
 import time
+import uuid
+from werkzeug.security import generate_password_hash
 
 MAX_LIKES_PER_COMMENT = 1000   # Cada comentario llega hasta este máximo
-_thread = None
+_threads = []
 _stop_event = threading.Event()
 _socketio = None
 _app = None
@@ -19,6 +21,53 @@ def _set_deps(app, socketio):
     global _socketio, _app
     _app = app
     _socketio = socketio
+
+
+def _image_auto_like_loop():
+    from models import Image, ImageVote, User, db
+
+    while not _stop_event.is_set():
+        _stop_event.wait(180)  # cada 3 minutos
+        if _stop_event.is_set():
+            break
+
+        try:
+            with _app.app_context():
+                images = Image.query.with_entities(Image.id).all()
+                ids = [i.id for i in images]
+                if not ids:
+                    continue
+
+                batch = random.sample(ids, min(40, len(ids)))
+
+                # Dos usuarios automáticos por lote para permitir 1 o 2 likes por imagen
+                u1 = User(
+                    email=f'autolike_{uuid.uuid4().hex[:12]}@local',
+                    password_hash=generate_password_hash('auto')
+                )
+                u2 = User(
+                    email=f'autolike_{uuid.uuid4().hex[:12]}@local',
+                    password_hash=generate_password_hash('auto')
+                )
+                db.session.add_all([u1, u2])
+                db.session.flush()
+
+                votes = []
+                for image_id in batch:
+                    add = random.choice([1, 2])
+                    chosen = random.sample([u1, u2], add)
+                    for u in chosen:
+                        votes.append(ImageVote(image_id=image_id, user_id=u.id, vote_type='like'))
+
+                db.session.bulk_save_objects(votes)
+                db.session.commit()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
 
 def _auto_like_loop():
@@ -64,14 +113,18 @@ def _auto_like_loop():
 
 
 def start_auto_likes(app, socketio):
-    global _thread
+    global _threads
     # Evitar doble inicio (ej. Flask debug reloader)
-    if _thread and _thread.is_alive():
+    if _threads and any(t.is_alive() for t in _threads):
         return
     _set_deps(app, socketio)
     _stop_event.clear()
-    _thread = threading.Thread(target=_auto_like_loop, daemon=True, name='auto_likes')
-    _thread.start()
+    _threads = [
+        threading.Thread(target=_auto_like_loop, daemon=True, name='auto_likes_comments'),
+        threading.Thread(target=_image_auto_like_loop, daemon=True, name='auto_likes_images')
+    ]
+    for t in _threads:
+        t.start()
 
 
 def stop_auto_likes():

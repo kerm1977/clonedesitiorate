@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, current_app, send_file
 from flask_login import login_required, current_user
-from models import db, User, Image, Message, AppConfig, ImageSource, Notification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage, FakeUserCategory, FakeUser
+from models import db, User, Image, AppConfig, ImageSource, AdminNotification, PushSubscription, Story, LoginAttempt, RateLimit, Favorite, ActivityLog, ImageComment, ImageQuestion, ImageQuestionResponse, RatingFiveFeedback, ImageVote, DeletedImage, FakeUserCategory, FakeUser
 from chat_socket import _user_sids
 from datetime import datetime, timedelta
 import json
 import os
 import io
 import zipfile
+import threading
 from functools import wraps
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -81,7 +82,8 @@ def admin():
     def _cfg(k, d=''): c = AppConfig.query.filter_by(key=k).first(); return c.value if c else d
     
     # Contar videos y archivos en colección
-    videos_count = sum(1 for img in Image.query.all() if img.is_video)
+    images_count = db.session.query(db.func.count(Image.id)).scalar()
+    videos_count = db.session.query(db.func.count(Image.id)).filter_by(is_video=True).scalar()
     coleccion_folder = r'E:\coleccion'
     coleccion_count = 0
     if os.path.isdir(coleccion_folder):
@@ -98,17 +100,17 @@ def admin():
 
     return render_template('admin.html',
         nita_online=nita_online,
-        messages=Message.query.order_by(Message.created_at.desc()).all(),
-        images=Image.query.order_by(Image.created_at.desc()).all(),
-        images_count=Image.query.count(),
+        images=Image.query.order_by(Image.created_at.desc()).limit(200).all(),
+        images_count=images_count,
         videos_count=videos_count,
         coleccion_count=coleccion_count,
         sources=ImageSource.query.order_by(ImageSource.created_at).all(),
         upload_sources=ImageSource.query.filter_by(source_type='upload', active=True).all(),
-        users=User.query.order_by(User.created_at if hasattr(User, 'created_at') else User.id).all(),
+        users=User.query.order_by(User.created_at if hasattr(User, 'created_at') else User.id).limit(200).all(),
+        community_active=_cfg('community_active', '0') == '1',
         community_title=_cfg('community_title', '¡Felicidades!'),
         community_subtitle=_cfg('community_subtitle', 'Eres parte de nuestra Comunidad.'),
-        community_message=_cfg('community_message', 'PedoMoms Love'),
+        community_message=_cfg('community_message', 'Mensaje de la Comunidad'),
         visible_user_count=_cfg('visible_user_count', '1004'),
         blocked_ips=LoginAttempt.query.filter_by(blocked=True).order_by(LoginAttempt.last_attempt.desc()).all(),
         compress_log=compress_log)
@@ -177,8 +179,9 @@ def update_community_message():
     title = request.form.get('title', '').strip()
     subtitle = request.form.get('subtitle', '').strip()
     message = request.form.get('message', '').strip()
+    active = '1' if request.form.get('active') else '0'
 
-    for key, value in [('community_title', title), ('community_subtitle', subtitle), ('community_message', message)]:
+    for key, value in [('community_title', title), ('community_subtitle', subtitle), ('community_message', message), ('community_active', active)]:
         cfg = AppConfig.query.filter_by(key=key).first()
         if cfg:
             cfg.value = value
@@ -186,6 +189,30 @@ def update_community_message():
             db.session.add(AppConfig(key=key, value=value))
 
     db.session.commit()
+
+    # Notificación push a Nita cuando se activa el mensaje final
+    if active == '1':
+        def _push_nita_community():
+            from app import app as _app
+            with _app.app_context():
+                from push_helper import send_push_notification
+                subs = PushSubscription.query.filter_by(username='nitalaosita').all()
+                if subs and os.path.exists('vapid_keys.json'):
+                    with open('vapid_keys.json', 'r') as f:
+                        keys = json.load(f)
+                    payload = json.dumps({
+                        'type': 'community',
+                        'title': '💜 Mensaje Final activado',
+                        'body': f'{title}: {message}',
+                        'sender': 'Admin'
+                    })
+                    for sub in subs:
+                        try:
+                            send_push_notification(sub, payload, keys['private_key'])
+                        except Exception:
+                            pass
+        threading.Thread(target=_push_nita_community, daemon=True).start()
+
     flash('Mensaje de comunidad actualizado', 'success')
     return redirect(url_for('admin.admin') + '#tabComunidad')
 
@@ -195,14 +222,14 @@ def update_community_message():
 def get_notifications():
     if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
         return jsonify(error='No autorizado'), 403
-    notifications = Notification.query.order_by(Notification.created_at.desc()).limit(10).all()
+    notifications = AdminNotification.query.order_by(AdminNotification.created_at.desc()).limit(10).all()
     def _cr(dt):
         return (dt - timedelta(hours=6)).strftime('%d/%m/%Y %I:%M %p') if dt else ''
     return jsonify([{
         'id': n.id,
         'message': n.message,
-        'type': n.notification_type,
-        'read': n.read,
+        'type': n.type,
+        'read': n.is_read,
         'created_at': _cr(n.created_at)
     } for n in notifications])
 
@@ -212,8 +239,8 @@ def get_notifications():
 def mark_notification_read(notification_id):
     if not (current_user.is_superuser or current_user.username in ('nita','lausita','nitalaosita')):
         return jsonify(error='No autorizado'), 403
-    notification = Notification.query.get_or_404(notification_id)
-    notification.read = True
+    notification = AdminNotification.query.get_or_404(notification_id)
+    notification.is_read = True
     db.session.commit()
     return jsonify(success=True)
 
@@ -449,6 +476,25 @@ def nita_activity_history():
                 image_id = int(log.object_id)
             except (TypeError, ValueError):
                 image_id = None
+
+        labels = {
+            'view': 'Vio',
+            'download': 'Descargó',
+            'comment': 'Comentó',
+            'like': 'Le dio Like',
+            'dislike': 'Le dio Dislike',
+            'topic_create': 'Publicó un tema',
+            'topic_reply': 'Respondió un tema'
+        }
+        icons = {
+            'view': 'eye',
+            'download': 'download',
+            'comment': 'chat-dots',
+            'like': 'hand-thumbs-up-fill',
+            'dislike': 'hand-thumbs-down-fill',
+            'topic_create': 'journal-text',
+            'topic_reply': 'reply-fill'
+        }
         return {
             'name': log.object_name,
             'url': log.object_url or '#',
@@ -456,19 +502,35 @@ def nita_activity_history():
             'day': day,
             'time': time,
             'extra': log.extra or '',
-            'image_id': image_id
+            'image_id': image_id,
+            'action': log.action,
+            'label': labels.get(log.action, log.action),
+            'icon': icons.get(log.action, 'clock-history')
         }
 
-    likes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'like').order_by(ActivityLog.created_at.desc()).limit(200).all()
-    dislikes = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'dislike').order_by(ActivityLog.created_at.desc()).limit(200).all()
-    downloads = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ActivityLog.action == 'download').order_by(ActivityLog.created_at.desc()).limit(200).all()
-    other = ActivityLog.query.filter(ActivityLog.username.in_(('nita','lausita','nitalaosita')), ~ActivityLog.action.in_(('like','dislike','download'))).order_by(ActivityLog.created_at.desc()).limit(100).all()
+    logs = ActivityLog.query.filter(
+        ActivityLog.username.in_(('nita','lausita','nitalaosita'))
+    ).order_by(ActivityLog.created_at.desc()).limit(300).all()
+
+    all_images = Image.query.all()
+    videos_count = sum(1 for img in all_images if img.is_video)
+    images_count = len(all_images) - videos_count
+
+    seen_names = set()
+    deduped_logs = []
+    for log in logs:
+        formatted = _format(log)
+        name = formatted.get('name') or ''
+        if name and name in seen_names:
+            continue
+        if name:
+            seen_names.add(name)
+        deduped_logs.append(formatted)
 
     return render_template('nita_activity.html',
-                           likes=[_format(log) for log in likes],
-                           dislikes=[_format(log) for log in dislikes],
-                           downloads=[_format(log) for log in downloads],
-                           other_entries=[_format(log) for log in other])
+                           logs=deduped_logs,
+                           images_count=images_count,
+                           videos_count=videos_count)
 
 
 @admin_bp.route('/visible-user-count', methods=['POST'])

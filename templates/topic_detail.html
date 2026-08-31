@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ topic.title }} · Temas{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-md-5">
+    <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+        <a href="{{ url_for('topics.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver a Temas
+        </a>
+        {% if current_user.is_superuser or current_user.id == topic.user_id %}
+        <a href="{{ url_for('topics.edit', topic_id=topic.id) }}" class="btn btn-fun-pink btn-sm">
+            <i class="bi bi-pencil me-1"></i>Editar tema
+        </a>
+        <button type="button" class="btn btn-danger btn-sm" data-title="{{ topic.title|e }}" onclick="confirmDeleteTopic({{ topic.id }}, this.getAttribute('data-title'))">
+            <i class="bi bi-trash me-1"></i>Borrar tema
+        </button>
+        <form id="deleteTopicForm{{ topic.id }}" action="{{ url_for('topics.delete_topic', topic_id=topic.id) }}" method="POST" style="display:none;"></form>
+        {% endif %}
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:20px;overflow:hidden;background:#fff;">
+        {% if topic.image_path %}
+        <img src="{{ url_for('topics.serve_thumb', topic_id=topic.id) }}" alt="{{ topic.title }}"
+             data-full="{{ url_for('topics.serve_image', topic_id=topic.id) }}"
+             class="w-100" style="max-height:360px;object-fit:cover;cursor:zoom-in;"
+             onclick="openTopicImage(this.dataset.full)">
+        {% endif %}
+        <div class="card-body p-4">
+            <h1 class="fun-title" style="font-size:1.4rem;color:#3d2060;">{{ topic.title }}</h1>
+            <p class="text-muted small mb-3">
+                <i class="bi bi-person-fill me-1"></i>{{ topic.user.username or topic.user.email }}
+                <span class="mx-1">·</span>
+                <i class="bi bi-clock me-1"></i>{{ topic.published_at.strftime('%d/%m/%Y %H:%M') }}
+            </p>
+            {% if topic.description %}
+            <p class="card-text" style="white-space:pre-wrap;">{{ topic.description }}</p>
+            {% endif %}
+            {% if topic.link %}
+            <p class="mb-0">
+                <a href="{{ topic.link }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary rounded-pill">
+                    <i class="bi bi-link-45deg me-1"></i>Abrir enlace
+                </a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h5 class="fun-title mb-3" style="font-size:1.1rem;color:#3d2060;">
+        💬 {{ replies|length }} respuesta{{ 's' if replies|length != 1 else '' }}
+    </h5>
+
+    {% if replies %}
+    <div class="mb-4">
+        {% for r in replies %}
+        <div class="card border-0 shadow-sm mb-2" style="border-radius:16px;background:#fff8fc;">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <small class="fw-semibold" style="color:{{ '#ff6b9d' if r.display_name == 'Nita la Osita' else '#845ec2' }};">
+                        <i class="bi bi-person-circle me-1"></i>{{ r.display_name or r.user.username or r.user.email }}
+                    </small>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        {% if current_user.is_superuser or current_user.id == r.user_id %}
+                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size:0.75rem;" onclick="toggleEditReply({{ r.id }})">Editar</button>
+                        <form action="{{ url_for('topics.delete_reply', reply_id=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta respuesta?')">
+                            <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none text-danger" style="font-size:0.75rem;">Borrar</button>
+                        </form>
+                        {% endif %}
+                        <small class="text-muted" style="font-size:0.75rem;">
+                            {{ r.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </small>
+                    </div>
+                </div>
+                <p id="replyContent{{ r.id }}" class="mb-0 small" style="white-space:pre-wrap;">{{ r.content }}</p>
+                <form id="editForm{{ r.id }}" action="{{ url_for('topics.edit_reply', reply_id=r.id) }}" method="POST" style="display:none;">
+                    <div class="mb-2 mt-2">
+                        <textarea name="content" class="form-control form-control-sm" rows="2" required>{{ r.content }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-fun-pink" style="border-radius:8px;">Guardar</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;" onclick="toggleEditReply({{ r.id }})">Cancelar</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-3 mb-4">
+        <p class="small">Aún no hay respuestas. ¡Sé el primero en comentar!</p>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm" style="border-radius:20px;background:#fff;">
+        <div class="card-body p-3">
+            <form action="{{ url_for('topics.reply', topic_id=topic.id) }}" method="POST">
+                <input type="hidden" name="display_name" value="{{ reply_display_name }}">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">{{ reply_display_name }}</label>
+                    <textarea name="content" class="form-control" rows="3" placeholder="Escribe una respuesta..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-fun-pink btn-sm" style="border-radius:12px;">
+                    <i class="bi bi-reply me-1"></i>Responder
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal imagen de tema -->
+<div class="modal fade" id="topicImageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="margin:0 auto;">
+        <div class="modal-content" style="background:transparent;border:none;">
+            <div class="modal-body p-0 d-flex align-items-center justify-content-center" style="min-height:100vh;background:rgba(0,0,0,0.92);">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"
+                        style="position:fixed;top:20px;right:20px;z-index:9999;"></button>
+                <img id="topicImageModalImg" src="" alt="" style="max-width:100%;max-height:92vh;object-fit:contain;border-radius:12px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let _topicImageModal = null;
+function openTopicImage(src) {
+    const img = document.getElementById('topicImageModalImg');
+    if (img) img.src = src;
+    const el = document.getElementById('topicImageModal');
+    if (!_topicImageModal) _topicImageModal = new bootstrap.Modal(el);
+    _topicImageModal.show();
+}
+</script>
+
+<script>
+function toggleEditReply(id) {
+    const content = document.getElementById('replyContent' + id);
+    const form = document.getElementById('editForm' + id);
+    if (content && form) {
+        content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+}
+</script>
+{% endblock %}

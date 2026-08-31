@@ -25,10 +25,11 @@
                                controls autoplay muted loop
                                style="max-height:70vh; border-radius:8px; display:block;"></video>
                         {% else %}
-                        <img src="{{ url_for('game.serve_image', image_id=image.id) }}" 
+                        <img src="{{ url_for('game.serve_low_image', image_id=image.id) }}" 
                              alt="{{ image.filename }}" 
                              class="img-fluid rounded"
-                             style="max-height: 70vh;">
+                             style="max-height: 70vh;"
+                             decoding="async">
                         {% endif %}
                         {% if is_moderator %}
                         <div class="vote-overlay" data-image-id="{{ image.id }}" data-like="{{ like_count or 0 }}" data-dislike="{{ dislike_count or 0 }}" data-user-vote="{{ user_vote or '' }}" style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.65); padding:5px 10px; border-radius:20px;">

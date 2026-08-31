@@ -180,9 +180,6 @@
                 <button class="vote-like" onclick="event.stopPropagation(); voteImage({{ image.id }}, 'like')" title="Me gusta">
                     <i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">0</span>
                 </button>
-                <button class="vote-dislike" onclick="event.stopPropagation(); voteImage({{ image.id }}, 'dislike')" title="No me gusta">
-                    <i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">0</span>
-                </button>
             </div>
             {% endif %}
             {% if image.is_video %}

@@ -77,7 +77,7 @@ def register_socket_events(socketio):
                 join_room(f'user_{current_user.username}')
                 if timer:
                     timer.cancel()
-                    # Reconexión dentro del período de gracia: no avisar desconexión
+                    # Reconexión dentro del período de gracia: no mostrar conexión/desconexión
                     return
                 emit('nita_activity', {
                     'type': 'connect',
@@ -130,7 +130,8 @@ def register_socket_events(socketio):
                         socketio.emit('user_offline', {'username': username})
 
                 with _nita_disconnect_lock:
-                    _nita_disconnect_timers[username] = threading.Timer(5.0, _nita_gone)
+                    # 2 minutos de gracia: real desconexión si está inactiva
+                    _nita_disconnect_timers[username] = threading.Timer(120.0, _nita_gone)
                     _nita_disconnect_timers[username].start()
                 return
 

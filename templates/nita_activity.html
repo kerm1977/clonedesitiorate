@@ -7,20 +7,40 @@
         <h2 class="fw-bold mb-0">
             <i class="bi bi-clock-history text-warning me-2"></i>Historial de actividad de NITA
         </h2>
-        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-light btn-sm">
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Volver al panel
         </a>
     </div>
 
-    {% macro activity_list(items, empty_msg, show_delete=False) %}
-        {% if items %}
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <div class="card border-0 shadow-sm text-center p-3" style="background:#2d1b4e; color:#fff; border-radius:16px;">
+                <div class="fw-bold" style="font-size:2rem; color:#ff6b9d;">{{ images_count }}</div>
+                <div class="small text-muted">Imágenes</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card border-0 shadow-sm text-center p-3" style="background:#2d1b4e; color:#fff; border-radius:16px;">
+                <div class="fw-bold" style="font-size:2rem; color:#845ec2;">{{ videos_count }}</div>
+                <div class="small text-muted">Videos</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="background:#2d1b4e; color:#fff; border-radius:16px;">
+        <div class="card-body p-0">
+            {% if logs %}
             <ul class="list-unstyled mb-0">
-                {% for e in items %}
+                {% for e in logs %}
                 <li class="p-3">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                         <div class="d-flex gap-3 align-items-start" style="min-width:0;">
+                            <div class="text-warning" style="min-width:24px;">
+                                <i class="bi bi-{{ e.icon }}"></i>
+                            </div>
                             <div style="min-width:0;">
-                                <div class="fw-semibold mb-1 text-white">
+                                <div class="fw-semibold mb-1">
+                                    <span class="badge bg-light text-dark me-2">{{ e.label }}</span>
                                     {{ e.name }}
                                 </div>
                                 {% if e.extra %}
@@ -28,21 +48,14 @@
                                     "{{ e.extra }}"
                                 </div>
                                 {% endif %}
-                                <a href="{{ e.url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                <a href="{{ e.url }}" class="btn btn-sm mt-2">
                                     <i class="bi bi-box-arrow-up-right me-1"></i>Ver
                                 </a>
-                                {% if show_delete and e.image_id %}
-                                <form method="POST" action="{{ url_for('admin.delete_image', image_id=e.image_id) }}" class="d-inline ms-2" onsubmit="return confirm('¿Eliminar físicamente esta imagen?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger mt-2">
-                                        <i class="bi bi-trash me-1"></i>Eliminar
-                                    </button>
-                                </form>
-                                {% endif %}
                             </div>
                         </div>
-                        <div class="text-end text-nowrap text-muted small">
-                            <div class="fw-semibold text-white">{{ e.day }}</div>
-                            <div>{{ e.time }}</div>
+                        <div class="text-end text-nowrap small">
+                            <div class="fw-semibold">{{ e.day }}</div>
+                            <div class="text-muted">{{ e.time }}</div>
                             <div class="text-capitalize">{{ e.username }}</div>
                         </div>
                     </div>
@@ -50,57 +63,13 @@
                 {% if not loop.last %}<hr class="my-0 opacity-25">{% endif %}
                 {% endfor %}
             </ul>
-        {% else %}
+            {% else %}
             <div class="p-4 text-center text-muted">
                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                {{ empty_msg }}
+                No hay actividades registradas aún.
             </div>
-        {% endif %}
-    {% endmacro %}
-
-    <div class="row g-4">
-        <div class="col-12 col-md-6">
-            <div class="card text-white border-0" style="background:#1b4332;">
-                <div class="card-header border-0 fw-bold">
-                    <i class="bi bi-hand-thumbs-up-fill me-2"></i>Imágenes que le gustaron (Like)
-                </div>
-                <div class="card-body p-0">
-                    {{ activity_list(likes, 'No hay likes registrados aún.') }}
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6">
-            <div class="card text-white border-0" style="background:#5a0b0b;">
-                <div class="card-header border-0 fw-bold">
-                    <i class="bi bi-hand-thumbs-down-fill me-2"></i>Imágenes que no le gustaron (Dislike)
-                </div>
-                <div class="card-body p-0">
-                    {{ activity_list(dislikes, 'No hay dislikes registrados aún.', show_delete=True) }}
-                </div>
-            </div>
+            {% endif %}
         </div>
     </div>
-
-    {% if downloads %}
-    <div class="card bg-dark text-white border-info mt-4">
-        <div class="card-header border-0 fw-bold">
-            <i class="bi bi-download me-2"></i>Imágenes/videos descargados
-        </div>
-        <div class="card-body p-0">
-            {{ activity_list(downloads, 'No hay descargas registradas aún.') }}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if other_entries %}
-    <div class="card bg-dark text-white border-secondary mt-4">
-        <div class="card-header border-0">
-            <i class="bi bi-clock-history me-2"></i>Otras actividades
-        </div>
-        <div class="card-body p-0">
-            {{ activity_list(other_entries, 'No hay otras actividades.') }}
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

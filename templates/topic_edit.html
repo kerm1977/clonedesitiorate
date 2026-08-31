@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}✏️ Editar tema{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-md-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm" style="border-radius:20px;background:#fff;">
+                <div class="card-header border-0" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);border-radius:20px 20px 0 0;">
+                    <h5 class="mb-0 text-white fw-bold">✏️ Editar tema</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('topics.edit', topic_id=topic.id) }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Título</label>
+                            <input type="text" name="title" class="form-control" value="{{ topic.title }}" required maxlength="200">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Descripción</label>
+                            <textarea name="description" class="form-control" rows="4" placeholder="Escribe una descripción...">{{ topic.description or '' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Enlace (opcional)</label>
+                            <input type="url" name="link" class="form-control" value="{{ topic.link or '' }}" placeholder="https://...">
+                        </div>
+                        {% if topic.image_path %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Imagen actual</label>
+                            <div class="mb-2">
+                                <img src="{{ url_for('topics.serve_thumb', topic_id=topic.id) }}" alt="{{ topic.title }}" class="img-fluid rounded" style="max-height:220px;object-fit:cover;">
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">{% if topic.image_path %}Cambiar imagen{% else %}Agregar imagen{% endif %} (opcional)</label>
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn w-100" style="background:linear-gradient(135deg,#ff6b9d,#845ec2);color:#fff;border-radius:12px;">
+                            <i class="bi bi-check-lg me-1"></i>Guardar cambios
+                        </button>
+                        <a href="{{ url_for('topics.detail', topic_id=topic.id) }}" class="btn btn-outline-secondary w-100 mt-2" style="border-radius:12px;">
+                            Cancelar
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

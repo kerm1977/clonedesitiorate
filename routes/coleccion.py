@@ -140,7 +140,7 @@ def index():
     for full_path in collection_paths:
         if full_path not in collection_images and os.path.isfile(full_path):
             name = os.path.basename(full_path)
-            img = Image(filename=name, filepath=full_path, folder=COLECCION_FOLDER, active=False)
+            img = Image(filename=name, filepath=full_path, folder=COLECCION_FOLDER, active=True)
             new_images.append(img)
             collection_images[full_path] = img
     if new_images:
@@ -225,7 +225,7 @@ def index():
         files = [f for f in files if f['type'] == 'video']
 
     page = request.args.get('page', 1, type=int)
-    per_page = 15
+    per_page = 20
     random.shuffle(files)
     total = len(files)
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -235,16 +235,32 @@ def index():
     has_prev = page > 1
     has_next = page < total_pages
 
+    if total_pages <= 3:
+        pages = list(range(1, total_pages + 1))
+    else:
+        pages = [1, 2, None, total_pages]
+
     visible_cfg = AppConfig.query.filter_by(key='visible_user_count').first()
     visible_user_count = visible_cfg.value if visible_cfg else '1004'
 
+    all_images = Image.query.all()
+    total_videos = sum(1 for img in all_images if img.is_video)
+    total_images = len(all_images) - total_videos
+
     if request.args.get('partial') == '1':
         return render_template('partials/coleccion_grid.html', files=paginated_files,
-                               page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
-                               filter_type=filter_type, is_moderator=is_moderator)
+                               page=page, total_pages=total_pages, pages=pages,
+                               has_prev=has_prev, has_next=has_next,
+                               filter_type=filter_type, is_moderator=is_moderator,
+                               total_images=total_images,
+                               total_videos=total_videos)
     return render_template('coleccion.html', files=paginated_files, superuser_usernames=superuser_usernames,
-                           page=page, total_pages=total_pages, has_prev=has_prev, has_next=has_next,
-                           filter_type=filter_type, is_moderator=is_moderator, visible_user_count=visible_user_count)
+                           page=page, total_pages=total_pages, pages=pages,
+                           has_prev=has_prev, has_next=has_next,
+                           filter_type=filter_type, is_moderator=is_moderator,
+                           visible_user_count=visible_user_count,
+                           total_images=total_images,
+                           total_videos=total_videos)
 
 
 @coleccion_bp.route('/opinion', methods=['POST'])
@@ -298,13 +314,19 @@ def view(image_id):
     img = Image.query.get_or_404(image_id)
     if _is_safe_path(COLECCION_FOLDER, img.filepath) and os.path.isfile(img.filepath):
         media_url = url_for('coleccion.serve_file', filename=img.filename)
+        download_url = url_for('coleccion.serve_file', filename=img.filename, download='1')
     else:
         media_url = url_for('game.serve_image', image_id=img.id)
+        download_url = url_for('game.download_image', image_id=img.id)
     like_count = ImageVote.query.filter_by(image_id=img.id, vote_type='like').count()
     dislike_count = ImageVote.query.filter_by(image_id=img.id, vote_type='dislike').count()
     user_vote = ImageVote.query.filter_by(image_id=img.id, user_id=current_user.id).first()
     is_moderator = current_user.is_superuser or current_user.username in ('nita', 'lausita', 'nitalaosita')
+    log_activity(current_user.username, 'view', 'image', img.filename,
+                 object_url=url_for('coleccion.view', image_id=img.id),
+                 object_id=img.id)
     return render_template('coleccion_view.html', image=img, media_url=media_url,
+                           download_url=download_url,
                            like_count=like_count, dislike_count=dislike_count,
                            user_vote=user_vote.vote_type if user_vote else None,
                            is_moderator=is_moderator)
@@ -355,6 +377,13 @@ def serve_low(filename):
     ext = os.path.splitext(filename)[1].lower()
     if ext not in IMAGE_EXTS:
         abort(404)
+
+    # Servir GIF/WEBP originales (pueden ser animados; no reconvertir)
+    if ext in {'.gif', '.webp'}:
+        mime_type, _ = mimetypes.guess_type(full_path)
+        response = send_file(full_path, mimetype=mime_type, conditional=True) if mime_type else send_file(full_path, conditional=True)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
 
     cache_path = _get_image_low_path(filename, full_path)
     if os.path.exists(cache_path):

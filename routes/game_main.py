@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, make_response
 from flask_login import current_user
-from models import db, Image, Favorite, FinalFeedback, AppConfig, WeeklyStoryComment, StoryComment, CommentRead, ImageComment, Message, ImageQuestion, ImageVote
+from models import db, Image, Favorite, FinalFeedback, AppConfig, WeeklyStoryComment, StoryComment, CommentRead, ImageComment, ImageQuestion, ImageVote
 from utils import get_session_id
 from sqlalchemy import func
 
@@ -58,7 +58,7 @@ def register_game_routes(bp):
         result = {
             'images': [{
                 'id': img.id,
-                'url': url_for('game.serve_image', image_id=img.id),
+                'url': url_for('game.serve_low_image', image_id=img.id) if not img.is_video else url_for('game.serve_image', image_id=img.id),
                 'thumb_url': url_for('game.serve_thumbnail', image_id=img.id) if not img.is_video else url_for('game.serve_image', image_id=img.id),
                 'download_url': url_for('game.download_image', image_id=img.id),
                 'filename': img.filename,
@@ -79,19 +79,17 @@ def register_game_routes(bp):
         img = Image.query.get_or_404(image_id)
         uid = get_session_id()
         is_fav = Favorite.query.filter_by(user_session=uid, image_id=img.id).first() is not None
-        img_msg = Message.query.filter_by(trigger_image_id=img.id).first()
-        
+
         image_question = ImageQuestion.query.filter_by(
             image_id=img.id,
             active=True
         ).first()
-        
+
         return jsonify(id=img.id, url=url_for('game.serve_image', image_id=img.id),
                        download_url=url_for('game.download_image', image_id=img.id),
                        filename=img.filename, is_favorited=is_fav,
                        is_video=img.is_video,
                        has_confetti=img.has_confetti,
-                       image_message=img_msg.text if img_msg else None,
                        image_question={'id': image_question.id, 'question': image_question.question} if image_question else None)
 
     # ── Bienvenida Nita: check & dismiss ──────────────────────────

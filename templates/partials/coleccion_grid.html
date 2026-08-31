@@ -32,9 +32,8 @@
                 </div>
                 {% endif %}
                 {% if f.image_id and is_moderator %}
-                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-dislike="{{ f.dislike_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
+                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
                     <button type="button" class="vote-like {{ 'voted-like' if f.user_vote == 'like' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ f.like_count or 0 }}</span></button>
-                    <button type="button" class="vote-dislike {{ 'voted-dislike' if f.user_vote == 'dislike' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'dislike');" title="No me gusta"><i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">{{ f.dislike_count or 0 }}</span></button>
                 </div>
                 {% endif %}
                 <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:48px; height:48px; border-radius:50%; background:rgba(229,57,53,0.85); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.4rem; box-shadow:0 2px 8px rgba(0,0,0,0.4); pointer-events:none;">▶</div>
@@ -48,15 +47,13 @@
                      data-filename="{{ f.name }}"
                      data-type="image"
                      data-like-count="{{ f.like_count or 0 }}"
-                     data-dislike-count="{{ f.dislike_count or 0 }}"
                      data-user-vote="{{ f.user_vote or '' }}"
                      class="w-100" style="height:180px; object-fit:cover; cursor:pointer;"
                      alt="{{ f.name }}"
                      onclick="{% if f.image_id %}window.location.href='{{ url_for('coleccion.view', image_id=f.image_id) }}'{% endif %}">
                 {% if f.image_id and is_moderator %}
-                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-dislike="{{ f.dislike_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
+                <div class="vote-overlay" data-image-id="{{ f.image_id }}" data-like="{{ f.like_count or 0 }}" data-user-vote="{{ f.user_vote or '' }}">
                     <button type="button" class="vote-like {{ 'voted-like' if f.user_vote == 'like' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ f.like_count or 0 }}</span></button>
-                    <button type="button" class="vote-dislike {{ 'voted-dislike' if f.user_vote == 'dislike' else '' }}" onclick="event.stopPropagation(); voteImage({{ f.image_id }}, 'dislike');" title="No me gusta"><i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">{{ f.dislike_count or 0 }}</span></button>
                 </div>
                 {% endif %}
             </div>
@@ -82,10 +79,39 @@
         <li class="page-item {% if not has_prev %}disabled{% endif %}">
             <a class="page-link" href="#" {% if not has_prev %}onclick="return false;"{% else %}onclick="loadColeccionFilter('{{ filter_type }}', {{ page - 1 }}); return false;"{% endif %}>Anterior</a>
         </li>
-        <li class="page-item active"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+        {% set current = page %}
+        {% set total = total_pages %}
+        {% if current == total %}
+            {% set start = [total - 1, 1]|max %}
+            {% set end = total %}
+        {% else %}
+            {% set start = current %}
+            {% set end = [current + 1, total]|min %}
+        {% endif %}
+        {% for p in range(start, end + 1) %}
+            <li class="page-item {% if p == current %}active{% endif %}">
+                {% if p == current %}
+                    <span class="page-link">{{ p }}</span>
+                {% else %}
+                    <a class="page-link" href="#" onclick="loadColeccionFilter('{{ filter_type }}', {{ p }}); return false;">{{ p }}</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+        {% if end < total %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="loadColeccionFilter('{{ filter_type }}', {{ total }}); return false;">{{ total }}</a>
+            </li>
+        {% endif %}
         <li class="page-item {% if not has_next %}disabled{% endif %}">
             <a class="page-link" href="#" {% if not has_next %}onclick="return false;"{% else %}onclick="loadColeccionFilter('{{ filter_type }}', {{ page + 1 }}); return false;"{% endif %}>Siguiente</a>
         </li>
     </ul>
 </nav>
 {% endif %}
+
+<div class="text-center text-muted small mt-3 mb-4" id="coleccionTotals">
+    <i class="bi bi-images me-1"></i>{{ total_images }} imágenes
+    <span class="mx-2">·</span>
+    <i class="bi bi-camera-video me-1"></i>{{ total_videos }} videos
+</div>

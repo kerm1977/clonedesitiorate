@@ -92,9 +92,9 @@ def register_game_images_routes(bp):
         
         # Detectar MIME type correcto para videos
         mime_type, _ = mimetypes.guess_type(img.filepath)
-        if mime_type:
-            return send_file(img.filepath, mimetype=mime_type, conditional=True)
-        return send_file(img.filepath, conditional=True)
+        response = send_file(img.filepath, mimetype=mime_type, conditional=True) if mime_type else send_file(img.filepath, conditional=True)
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
 
     @bp.route('/img/<int:image_id>/thumb')
     def serve_thumbnail(image_id):
@@ -133,6 +133,13 @@ def register_game_images_routes(bp):
         ext = os.path.splitext(img.filepath)[1].lower()
         if ext not in {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}:
             return send_file(img.filepath, conditional=True)
+
+        # Servir GIF/WEBP originales (pueden ser animados; no reconvertir)
+        if ext in {'.gif', '.webp'}:
+            mime_type, _ = mimetypes.guess_type(img.filepath)
+            response = send_file(img.filepath, mimetype=mime_type, conditional=True) if mime_type else send_file(img.filepath, conditional=True)
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
 
         cache_path = _get_game_low_path(img.filepath)
         if os.path.exists(cache_path):

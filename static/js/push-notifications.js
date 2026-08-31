@@ -48,6 +48,16 @@ async function subscribeToPush() {
             return false;
         }
 
+        // Limpiar suscripción previa si existe, para evitar conflictos
+        try {
+            const existingSub = await registration.pushManager.getSubscription();
+            if (existingSub) {
+                await existingSub.unsubscribe();
+            }
+        } catch (e) {
+            console.warn('No se pudo limpiar suscripción previa:', e);
+        }
+
         // Suscribirse
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,

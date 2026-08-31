@@ -49,7 +49,7 @@ def scan_folder(folder_path):
         if os.path.splitext(fn)[1].lower() in IMAGE_EXTENSIONS:
             fp = os.path.normpath(os.path.join(folder_path, fn))
             if not Image.query.filter_by(filepath=fp).first():
-                db.session.add(Image(filename=fn, filepath=fp, folder=folder_path))
+                db.session.add(Image(filename=fn, filepath=fp, folder=folder_path, active=True))
                 added += 1
     db.session.commit()
     return added, None

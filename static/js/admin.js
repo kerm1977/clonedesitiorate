@@ -1,22 +1,28 @@
 'use strict';
 
-var quill = new Quill('#quillEditor', {
-    theme: 'snow',
-    placeholder: 'Escribe aquí el contenido de Conózcanos...',
-    modules: {
-        toolbar: [
-            [{ header: [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ color: [] }, { background: [] }],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            ['link', 'blockquote'],
-            ['clean']
-        ]
-    }
-});
+var quill = null;
+var quillEditor = document.getElementById('quillEditor');
+if (quillEditor) {
+    quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        placeholder: 'Escribe aquí el contenido de Conózcanos...',
+        modules: {
+            toolbar: [
+                [{ header: [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ color: [] }, { background: [] }],
+                [{ list: 'ordered' }, { list: 'bullet' }],
+                ['link', 'blockquote'],
+                ['clean']
+            ]
+        }
+    });
+}
 
 function flushEditor() {
-    document.getElementById('aboutHidden').value = quill.root.innerHTML;
+    if (quill && document.getElementById('aboutHidden')) {
+        document.getElementById('aboutHidden').value = quill.root.innerHTML;
+    }
 }
 
 function toggleImage(id) {
@@ -37,7 +43,10 @@ function toggleImage(id) {
             }
             btn.disabled = false;
         })
-        .catch(() => { btn.disabled = false; });
+        .catch(err => {
+            console.error('Error toggling image:', err);
+            btn.disabled = false;
+        });
 }
 
 const hash = window.location.hash;

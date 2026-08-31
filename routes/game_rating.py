@@ -1,5 +1,5 @@
 from flask import request, jsonify, url_for
-from models import db, Message, Favorite, ImageQuestion, ImageQuestionResponse, ScheduledUserMessage, Image, ImageComment, DeletedImage, CommentLike, ImageVote
+from models import db, Favorite, ImageQuestion, ImageQuestionResponse, ScheduledUserMessage, Image, ImageComment, DeletedImage, CommentLike, ImageVote
 from utils import get_session_id, log_activity
 from sqlalchemy import func
 from datetime import datetime
@@ -205,8 +205,7 @@ def register_game_rating_routes(bp):
         Favorite.query.filter_by(image_id=image_id).delete()
         ImageComment.query.filter_by(image_id=image_id).delete()
         ImageQuestion.query.filter_by(image_id=image_id).delete()
-        Message.query.filter_by(trigger_image_id=image_id).delete()
-        
+
         # Eliminar la imagen de la base de datos
         db.session.delete(image)
         

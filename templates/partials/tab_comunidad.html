@@ -1,11 +1,19 @@
 <div class="tab-pane fade" id="tabComunidad" role="tabpanel">
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white">
-            <h5 class="mb-0">Mensaje de Comunidad (PedoMoms Love)</h5>
-            <p class="text-muted small mb-0">Este mensaje aparece cuando el usuario termina de calificar todas las imágenes</p>
+            <h5 class="mb-0">Mensaje Final de Comunidad</h5>
+            <p class="text-muted small mb-0">Mensaje personalizado que se muestra constantemente mientras esté activo.</p>
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('admin.update_community_message') }}">
+                <div class="mb-4">
+                    <div class="form-check form-switch form-check-reverse">
+                        <input class="form-check-input" type="checkbox" name="active" id="communityActive" value="1" {% if community_active %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="communityActive">
+                            Mostrar mensaje constantemente
+                        </label>
+                    </div>
+                </div>
                 <div class="mb-4">
                     <label class="form-label fw-bold">Título del mensaje</label>
                     <input type="text" name="title" class="form-control" value="{{ community_title or '¡Felicidades!' }}" required>
@@ -16,7 +24,7 @@
                 </div>
                 <div class="mb-4">
                     <label class="form-label fw-bold">Mensaje principal</label>
-                    <input type="text" name="message" class="form-control" value="{{ community_message or 'PedoMoms Love' }}" required>
+                    <input type="text" name="message" class="form-control" value="{{ community_message or 'Mensaje de la Comunidad' }}" required>
                 </div>
                 <div class="mb-4">
                     <label class="form-label fw-bold">Vista previa</label>
@@ -24,7 +32,7 @@
                         <div style="font-size: 4rem; margin-bottom: 1rem;">💜</div>
                         <h2 class="display-5 mb-3">{{ community_title or '¡Felicidades!' }}</h2>
                         <p class="fs-4 mb-4">{{ community_subtitle or 'Eres parte de nuestra Comunidad.' }}</p>
-                        <h1 class="display-4" style="color: var(--pink); font-weight: 900; text-shadow: 2px 2px 0 var(--yellow);">{{ community_message or 'PedoMoms Love' }}</h1>
+                        <h1 class="display-4" style="color: var(--pink); font-weight: 900; text-shadow: 2px 2px 0 var(--yellow);">{{ community_message or 'Mensaje de la Comunidad' }}</h1>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary">

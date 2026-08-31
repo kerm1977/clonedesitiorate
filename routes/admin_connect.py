@@ -1,5 +1,6 @@
 import subprocess
 import io
+import time
 from flask import Blueprint, request, redirect, url_for, flash, jsonify, send_file, Response
 from flask_login import login_required, current_user
 from models import db, AppConfig
@@ -7,6 +8,9 @@ from datetime import datetime
 
 admin_connect_bp = Blueprint('admin_connect', __name__, url_prefix='/admin/connect')
 CF_NO_WIN = 0x08000000  # CREATE_NO_WINDOW on Windows
+
+_STATUS_CACHE = {'ts_url': None, 'ts_running': None, 'cached_at': 0}
+_STATUS_TTL = 60
 
 
 def _guard():
@@ -52,10 +56,14 @@ def _kill(pid):
 def status():
     if _guard():
         return jsonify(error='No autorizado'), 403
-    ts_url = _get_tailscale_url()
+    now = time.time()
+    if now - _STATUS_CACHE['cached_at'] > _STATUS_TTL:
+        _STATUS_CACHE['ts_url'] = _get_tailscale_url()
+        _STATUS_CACHE['ts_running'] = _ts_is_running()
+        _STATUS_CACHE['cached_at'] = now
     return jsonify(
-        ts_running=_ts_is_running(),
-        ts_url=ts_url,
+        ts_running=_STATUS_CACHE['ts_running'],
+        ts_url=_STATUS_CACHE['ts_url'],
     )
 
 

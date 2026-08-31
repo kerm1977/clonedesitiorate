@@ -6,34 +6,13 @@ import json
 import re
 from flask import Flask, send_file
 from sqlalchemy import text
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_socketio import SocketIO
 from werkzeug.security import generate_password_hash
-from models import db, User, AboutContent, Favorite
+from models import db, User, AboutContent, Favorite, AdminNotification, ChatMessage
 from utils import get_session_id
 
 socketio = SocketIO()
-
-
-class HostFixMiddleware(object):
-    """WSGI middleware that overrides HTTP_HOST to localhost.
-
-    Tailscale Funnel and other reverse proxies send the real domain in the
-    Host header.  Flask/Werkzeug computes a subdomain from it and our
-    game_bp routes (no subdomain) stop matching, causing a 404.  Forcing the
-    Host header to the local loopback keeps Flask routing stable while
-    preserving the original host in HTTP_X_FORWARDED_HOST.
-    """
-    def __init__(self, app, default_host='127.0.0.1:8090'):
-        self.app = app
-        self.default_host = default_host
-
-    def __call__(self, environ, start_response):
-        if 'HTTP_HOST' in environ:
-            environ['HTTP_X_FORWARDED_HOST'] = environ['HTTP_HOST']
-            environ['HTTP_HOST'] = self.default_host
-        return self.app(environ, start_response)
-
 
 # Credenciales de superusuario
 SUPERUSERS = [
@@ -60,9 +39,7 @@ def create_app():
 
     db.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet',
-                      ping_timeout=60, ping_interval=1)
-    # Envolver el WSGI final para forzar Host local y evitar 404 con Tailscale
-    app.wsgi_app = HostFixMiddleware(app.wsgi_app)
+                      ping_timeout=60, ping_interval=10)
 
     @app.teardown_appcontext
     def _close_db(exc):
@@ -84,12 +61,43 @@ def create_app():
                 return c.value if c else d
             except Exception:
                 return d
+
+        notification_count = 0
+        unread_notifications = []
+        if current_user.is_authenticated:
+            try:
+                notification_count = AdminNotification.query.filter_by(
+                    recipient_id=current_user.id, is_read=False
+                ).count()
+                unread_notifications = AdminNotification.query.filter_by(
+                    recipient_id=current_user.id
+                ).order_by(AdminNotification.created_at.desc()).limit(10).all()
+            except Exception:
+                notification_count = 0
+                unread_notifications = []
+
+        chat_unread_count = 0
+        if current_user.is_authenticated:
+            try:
+                chat_unread_count = ChatMessage.query.filter_by(
+                    receiver_name=current_user.username, is_read=False
+                ).count()
+            except Exception:
+                chat_unread_count = 0
+
         return {
             'about': AboutContent.query.first(),
             'nita_report_enabled': _cfg('nita_report_enabled', '0') == '1',
             'nita_report_title': _cfg('nita_report_title', '¡Gracias por reportar! 🚩'),
             'nita_report_emoji': _cfg('nita_report_emoji', '🚩'),
             'nita_report_msg': _cfg('nita_report_msg', ''),
+            'notification_count': notification_count,
+            'unread_notifications': unread_notifications,
+            'chat_unread_count': chat_unread_count,
+            'community_active': _cfg('community_active', '0') == '1',
+            'community_title': _cfg('community_title', '¡Felicidades!'),
+            'community_subtitle': _cfg('community_subtitle', 'Eres parte de nuestra Comunidad.'),
+            'community_message': _cfg('community_message', 'Mensaje de la Comunidad'),
         }
 
     @app.template_filter('linkify')
@@ -114,7 +122,6 @@ def create_app():
     from routes.admin import admin_bp
     from routes.admin_media import admin_media_bp
     from routes.admin_connect import admin_connect_bp
-    from routes.admin_messages import admin_messages_bp
     from routes.admin_survey import admin_survey_bp
     from routes.admin_users import admin_users_bp
     from routes.admin_image_questions import admin_image_questions_bp
@@ -124,13 +131,13 @@ def create_app():
     register_game_chat_routes(game_chat_bp)
     from routes.coleccion import coleccion_bp
     from routes.nita_upload import nita_upload_bp
+    from routes.topics import topics_bp
 
     app.register_blueprint(game_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(admin_media_bp)
     app.register_blueprint(admin_connect_bp)
-    app.register_blueprint(admin_messages_bp)
     app.register_blueprint(admin_survey_bp)
     app.register_blueprint(admin_users_bp)
     app.register_blueprint(admin_image_questions_bp)
@@ -139,6 +146,7 @@ def create_app():
     app.register_blueprint(game_chat_bp)
     app.register_blueprint(coleccion_bp)
     app.register_blueprint(nita_upload_bp)
+    app.register_blueprint(topics_bp)
     app.config.setdefault('MAX_CONTENT_LENGTH', 100 * 1024 * 1024)
 
     from chat_socket import register_socket_events
@@ -187,7 +195,9 @@ def _run_migrations():
         "ALTER TABLE weekly_story_comment ADD COLUMN likes_count INTEGER DEFAULT 0",
         "ALTER TABLE story_comment ADD COLUMN likes_count INTEGER DEFAULT 0",
         "ALTER TABLE push_subscription ADD COLUMN username VARCHAR(100)",
+        "ALTER TABLE image ADD COLUMN active INTEGER DEFAULT 1",
         "ALTER TABLE image_comment ADD COLUMN likes_count INTEGER DEFAULT 0",
+        "ALTER TABLE topic_reply ADD COLUMN display_name VARCHAR(100)",
     ]
     indexes = [
         "CREATE INDEX IF NOT EXISTS idx_chat_message_sender_name ON chat_message(sender_name)",

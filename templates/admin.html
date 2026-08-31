@@ -104,22 +104,11 @@
                 <div class="text-muted small">Archivos en colección</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="stat-card text-center">
-                <div class="stat-num text-warning">{{ messages|length }}</div>
-                <div class="text-muted small">Mensajes de serie</div>
-            </div>
-        </div>
     </div>
 
     <ul class="nav nav-tabs admin-tabs mb-4 flex-wrap" id="adminTabs" role="tablist">
         <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#tabMensajes" role="tab">
-                <i class="bi bi-chat-quote me-1"></i>Mensajes
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-bs-toggle="tab" href="#tabImagenes" role="tab">
+            <a class="nav-link active" data-bs-toggle="tab" href="#tabImagenes" role="tab">
                 <i class="bi bi-images me-1"></i>Imágenes
             </a>
         </li>
@@ -166,7 +155,6 @@
     </ul>
 
     <div class="tab-content">
-        {% include 'partials/tab_mensajes.html' %}
         {% include 'partials/tab_imagenes.html' %}
         {% include 'partials/tab_comunidad.html' %}
         {% include 'partials/tab_usuarios.html' %}
@@ -181,8 +169,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<script src="{{ url_for('static', filename='js/admin.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 
 <script>
 function loadShareUrl() {
@@ -316,10 +304,10 @@ function checkNotifications() {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadShareUrl();
-    setInterval(loadShareUrl, 10000);
+    setInterval(loadShareUrl, 60000);
     
-    // Verificar notificaciones cada 5 segundos
-    setInterval(checkNotifications, 5000);
+    // Verificar notificaciones cada 30 segundos
+    setInterval(checkNotifications, 30000);
     checkNotifications();
 
     // Estado de Nita la cosita

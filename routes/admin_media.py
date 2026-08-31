@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, Image, ImageSource
 from utils import scan_folder, scan_all_sources, IMAGE_EXTENSIONS
-from PIL import Image
+from PIL import Image as PILImage
 
 admin_media_bp = Blueprint('admin_media', __name__, url_prefix='/admin/media')
 
@@ -104,7 +104,7 @@ def upload_images():
             fp = os.path.normpath(os.path.join(src.path, fn))
             f.save(fp)
             if not Image.query.filter_by(filepath=fp).first():
-                db.session.add(Image(filename=fn, filepath=fp, folder=src.path))
+                db.session.add(Image(filename=fn, filepath=fp, folder=src.path, active=True))
                 added += 1
     db.session.commit()
     flash(f'{added} imagen(es) subida(s) a "{src.name}"', 'success')
@@ -148,6 +148,28 @@ def toggle_image(iid):
     return jsonify(active=img.active)
 
 
+@admin_media_bp.route('/images/activate-all', methods=['POST'])
+@login_required
+def activate_all_images():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    count = Image.query.update({'active': True})
+    db.session.commit()
+    flash(f'{count} imágenes/videos activados', 'success')
+    return redirect(url_for('admin.admin') + '#tabImagenes')
+
+
+@admin_media_bp.route('/images/deactivate-all', methods=['POST'])
+@login_required
+def deactivate_all_images():
+    if _guard():
+        return jsonify(error='No autorizado'), 403
+    count = Image.query.update({'active': False})
+    db.session.commit()
+    flash(f'{count} imágenes/videos desactivados', 'warning')
+    return redirect(url_for('admin.admin') + '#tabImagenes')
+
+
 @admin_media_bp.route('/compress', methods=['POST'])
 @login_required
 def compress_images():
@@ -171,7 +193,7 @@ def compress_images():
         if ext in {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}:
             fp = os.path.normpath(os.path.join(folder_path, fn))
             try:
-                with Image.open(fp) as img:
+                with PILImage.open(fp) as img:
                     original_size = os.path.getsize(fp) / 1024  # KB
                     
                     # Convertir a RGB si es RGBA o tiene transparencia
@@ -183,7 +205,7 @@ def compress_images():
                     if img.width > max_width:
                         ratio = max_width / img.width
                         new_height = int(img.height * ratio)
-                        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                        img = img.resize((max_width, new_height), PILImage.Resampling.LANCZOS)
                         resized = True
                     
                     # Guardar con calidad reducida

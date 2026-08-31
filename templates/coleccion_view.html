@@ -6,11 +6,15 @@
     <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-8">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0 fun-title" style="color:#3d2060;">{{ image.filename }}</h5>
-                <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm btn-light">
+                <a href="{{ url_for('coleccion.index') }}" class="btn btn-sm">
                     <i class="bi bi-arrow-left"></i> Volver
                 </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Salir
+                </a>
             </div>
+
+            <h5 class="text-center fun-title mb-3" style="color:#3d2060;">{{ image.filename }}</h5>
 
             <div class="text-center" style="background:#000; border-radius:16px; overflow:hidden; position:relative;">
                 {% if image.is_video %}
@@ -22,12 +26,12 @@
                 <img src="{{ media_url }}"
                      alt="{{ image.filename }}"
                      class="img-fluid"
-                     style="max-height:70vh; display:block; margin:0 auto;">
+                     style="max-height:70vh; display:block; margin:0 auto; cursor:zoom-in;"
+                     onclick="openFullscreenImage('{{ media_url }}', '{{ image.filename }}', '{{ download_url }}')">
                 {% endif %}
                 {% if is_moderator %}
-                <div class="vote-overlay" data-image-id="{{ image.id }}" data-like="{{ like_count or 0 }}" data-dislike="{{ dislike_count or 0 }}" data-user-vote="{{ user_vote or '' }}" style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.65); padding:5px 10px; border-radius:20px;">
+                <div class="vote-overlay" data-image-id="{{ image.id }}" data-like="{{ like_count or 0 }}" data-user-vote="{{ user_vote or '' }}" style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.65); padding:5px 10px; border-radius:20px;">
                     <button type="button" class="vote-like {{ 'voted-like' if user_vote == 'like' else '' }}" onclick="voteImage({{ image.id }}, 'like');" title="Me gusta"><i class="bi bi-hand-thumbs-up"></i><span class="vote-count like-count">{{ like_count or 0 }}</span></button>
-                    <button type="button" class="vote-dislike {{ 'voted-dislike' if user_vote == 'dislike' else '' }}" onclick="voteImage({{ image.id }}, 'dislike');" title="No me gusta"><i class="bi bi-hand-thumbs-down"></i><span class="vote-count dislike-count">{{ dislike_count or 0 }}</span></button>
                 </div>
                 {% endif %}
             </div>
@@ -114,6 +118,39 @@ function prepareStory() {
     const textarea = document.getElementById('storyText');
     textarea.value = editor.innerHTML;
     return true;
+}
+
+function openFullscreenImage(url, filename, downloadUrl) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fullscreen-image-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.96)';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '99999';
+    overlay.style.padding = '20px';
+    overlay.style.cursor = 'zoom-out';
+    overlay.innerHTML = `
+        <div style="margin-bottom:12px; color:#fff; text-align:center; font-size:0.9rem; text-shadow:0 1px 4px #000;">
+            ${filename}
+        </div>
+        <img src="${url}" style="max-width:100%; max-height:80vh; object-fit:contain; border-radius:8px;" alt="${filename}">
+        <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
+            <a href="${downloadUrl}" download class="btn btn-danger btn-sm rounded-pill">⬇ Descargar original</a>
+            <button type="button" class="btn btn-light btn-sm rounded-circle" onclick="this.closest('.fullscreen-image-overlay').remove();" title="Cerrar" style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;"><i class="bi bi-x-lg"></i></button>
+        </div>
+    `;
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
+    document.body.appendChild(overlay);
 }
 </script>
 {% endblock %}
